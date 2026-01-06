@@ -14,9 +14,6 @@ public sealed class EnemyBrain : MonoBehaviour
     private float _speed;
     private Rigidbody _rb;
     private static readonly int MoveSpeedHash = Animator.StringToHash("MoveSpeed");
-    private static readonly int MoveXHash = Animator.StringToHash("MoveX");
-    private static readonly int MoveZHash = Animator.StringToHash("MoveZ");
-    private static readonly int IsMovingHash = Animator.StringToHash("IsMoving");
 
     public void Construct(RunScope scope, float speed)
     {
@@ -62,13 +59,9 @@ public sealed class EnemyBrain : MonoBehaviour
 
         if (animator != null)
         {
-            float moveSpeed01 = moving ? 1f : 0f; 
-            animator.SetFloat(MoveSpeedHash, moveSpeed01);
-
-            animator.SetFloat(MoveXHash, dir.x);
-            animator.SetFloat(MoveZHash, dir.z);
-
-            animator.SetBool(IsMovingHash, moving);
+            float move01 = moving ? 1f : 0f;
+            animator.SetFloat(MoveSpeedHash, move01, 0.08f, Time.deltaTime);
         }
+
     }
 }

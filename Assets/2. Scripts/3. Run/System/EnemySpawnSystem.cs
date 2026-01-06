@@ -31,13 +31,43 @@ public sealed class EnemySpawnSystem : MonoBehaviour
     }
     private void SpawnOne()
     {
-        var center = _scope.Entities.Player.transform.position;
-
+        var playerPos = _scope.Entities.Player.transform.position;
         float radius = (GameRoot.Instance != null) ? GameRoot.Instance.SpawnRadius : 10f;
-        var offset = Random.onUnitSphere * radius;
-        offset.y = 0f;
+        Vector2 r = Random.insideUnitCircle * radius;
+        Vector3 xz = new Vector3(playerPos.x + r.x, 0f, playerPos.z + r.y);
 
-        var pos = center + offset;
+        float groundY = 0f;
+        if (GameRoot.Instance != null)
+        {
+            float rayH = GameRoot.Instance.GroundRayHeight;
+            var origin = new Vector3(xz.x, rayH, xz.z);
+
+            if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, rayH * 2f,
+                    GameRoot.Instance.GroundMask, QueryTriggerInteraction.Ignore))
+            {
+                groundY = hit.point.y;
+            }
+        }
+
+        float halfH = 0.5f;
+        float extra = (GameRoot.Instance != null) ? GameRoot.Instance.GroundExtraOffset : 0.02f;
+
+        if (GameRoot.Instance != null && GameRoot.Instance.EnemyPrefab != null)
+        {
+            var prefabCol = GameRoot.Instance.EnemyPrefab.GetComponent<Collider>();
+            if (prefabCol != null)
+            {
+                float ext = prefabCol.bounds.extents.y;
+                if (ext > 0.0001f) halfH = ext;
+                else
+                {
+                    if (prefabCol is CapsuleCollider cap) halfH = (cap.height * 0.5f) * cap.transform.lossyScale.y;
+                    else if (prefabCol is BoxCollider box) halfH = (box.size.y * 0.5f) * box.transform.lossyScale.y;
+                }
+            }
+        }
+
+        Vector3 pos = new Vector3(xz.x, groundY + halfH + extra, xz.z);
 
         EnemyEntity enemy;
 
@@ -60,6 +90,7 @@ public sealed class EnemySpawnSystem : MonoBehaviour
 
             enemy = go.AddComponent<EnemyEntity>();
         }
+
         if (GameRoot.Instance != null)
         {
             var col = enemy.GetComponent<Collider>();
@@ -71,7 +102,38 @@ public sealed class EnemySpawnSystem : MonoBehaviour
                 GameRoot.Instance.GroundExtraOffset
             );
         }
+
         enemy.Construct(_scope);
         _scope.Entities.RegisterEnemy(enemy);
     }
+
+
+    private bool TryGetGroundY(Vector3 xzPos, out float groundY)
+    {
+        float rayStartHeight = GameRoot.Instance.GroundRayHeight;
+        var origin = new Vector3(xzPos.x, rayStartHeight, xzPos.z);
+
+        if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, rayStartHeight * 2f,
+                GameRoot.Instance.GroundMask, QueryTriggerInteraction.Ignore))
+        {
+            groundY = hit.point.y;
+            return true;
+        }
+
+        groundY = 0f;
+        return false;
+    }
+
+    private Vector3 GetSpawnPosOnGround(Vector3 playerPos, float radius, Collider enemyCol)
+    {
+        Vector2 r = Random.insideUnitCircle * radius;
+        Vector3 xz = new Vector3(playerPos.x + r.x, 0f, playerPos.z + r.y);
+
+        if (!TryGetGroundY(xz, out float y))
+            y = 0f;
+
+        float halfH = (enemyCol != null) ? enemyCol.bounds.extents.y : 0.5f;
+        return new Vector3(xz.x, y + halfH + GameRoot.Instance.GroundExtraOffset, xz.z);
+    }
+
 }
