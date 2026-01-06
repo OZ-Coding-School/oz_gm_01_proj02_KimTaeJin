@@ -16,6 +16,16 @@ public sealed class GameRoot : MonoBehaviour
     public EnemyEntity EnemyPrefab => enemyPrefab;
     public float SpawnInterval => spawnInterval;
     public float SpawnRadius => spawnRadius;
+
+    [Header("Ground Snap")]
+    [SerializeField] private LayerMask groundMask;
+    [SerializeField] private float groundRayHeight = 30f;
+    [SerializeField] private float groundExtraOffset = 0.02f;
+
+    public LayerMask GroundMask => groundMask;
+    public float GroundRayHeight => groundRayHeight;
+    public float GroundExtraOffset => groundExtraOffset;
+
     private void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -29,6 +39,8 @@ public sealed class GameRoot : MonoBehaviour
 
         _loop = new GameLoopStateMachine();
         _loop.Boot(_app);
+        Debug.Log($"Physics.gravity = {Physics.gravity}");
+
     }
 
     private void Update()

@@ -53,5 +53,12 @@ public sealed class PlayerController : MonoBehaviour
 
         if (_anim != null)
             _anim.SetFloat(MoveSpeedHash, inputDir.magnitude);
+        if (_anim != null)
+            _anim.applyRootMotion = false;
+
     }
+    private void OnAnimatorMove()
+    {
+    }
+
 }

@@ -50,9 +50,27 @@ public sealed class EnemySpawnSystem : MonoBehaviour
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.name = "Enemy";
             go.transform.position = pos;
+
+            var col = go.GetComponent<Collider>();
+            col.isTrigger = true;
+
+            var rb = go.AddComponent<Rigidbody>();
+            rb.useGravity = false;
+            rb.constraints = RigidbodyConstraints.FreezeRotation;
+
             enemy = go.AddComponent<EnemyEntity>();
         }
-
+        if (GameRoot.Instance != null)
+        {
+            var col = enemy.GetComponent<Collider>();
+            GroundSnap.TrySnapToGround(
+                enemy.transform,
+                col,
+                GameRoot.Instance.GroundMask,
+                GameRoot.Instance.GroundRayHeight,
+                GameRoot.Instance.GroundExtraOffset
+            );
+        }
         enemy.Construct(_scope);
         _scope.Entities.RegisterEnemy(enemy);
     }

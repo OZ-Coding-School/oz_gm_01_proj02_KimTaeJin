@@ -24,7 +24,17 @@ public sealed class GameManager
             go.transform.position = Vector3.zero;
             player = go.AddComponent<PlayerEntity>();
         }
-
+        if (GameRoot.Instance != null)
+        {
+            var col = player.GetComponent<Collider>();
+            GroundSnap.TrySnapToGround(
+                player.transform,
+                col,
+                GameRoot.Instance.GroundMask,
+                GameRoot.Instance.GroundRayHeight,
+                GameRoot.Instance.GroundExtraOffset
+            );
+        }
         player.Construct(_scope);
         _scope.Entities.RegisterPlayer(player);
 
