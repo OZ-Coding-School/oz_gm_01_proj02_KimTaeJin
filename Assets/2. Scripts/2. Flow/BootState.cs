@@ -1,18 +1,17 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-public class BootState : MonoBehaviour
+public sealed class BootState : IGameState
 {
-    // Start is called before the first frame update
-    void Start()
+    private readonly GameLoopStateMachine _sm;
+
+    public BootState(GameLoopStateMachine sm) => _sm = sm;
+
+    public void Enter(AppServicesRoot app)
     {
-        
+        Debug.Log("[BootState] Enter -> Go Run");
+        _sm.ChangeState(new RunState(_sm));
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
+    public void Tick() { }
+    public void Exit() { }
 }

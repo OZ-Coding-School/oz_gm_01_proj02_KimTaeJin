@@ -1,18 +1,28 @@
-using System.Collections;
+using System;
 using System.Collections.Generic;
-using UnityEngine;
 
-public class EntityManager : MonoBehaviour
+public sealed class EntityManager : IDisposable
 {
-    // Start is called before the first frame update
-    void Start()
+    public PlayerEntity Player { get; private set; }
+    public readonly List<EnemyEntity> Enemies = new();
+
+    public void RegisterPlayer(PlayerEntity p) => Player = p;
+
+    public void RegisterEnemy(EnemyEntity e)
     {
-        
+        if (e == null) return;
+        if (!Enemies.Contains(e)) Enemies.Add(e);
     }
 
-    // Update is called once per frame
-    void Update()
+    public void UnregisterEnemy(EnemyEntity e)
     {
-        
+        if (e == null) return;
+        Enemies.Remove(e);
+    }
+
+    public void Dispose()
+    {
+        Enemies.Clear();
+        Player = null;
     }
 }

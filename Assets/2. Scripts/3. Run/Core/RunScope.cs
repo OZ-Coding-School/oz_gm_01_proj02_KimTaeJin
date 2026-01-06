@@ -1,18 +1,33 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-public class RunScope : MonoBehaviour
+public sealed class RunScope : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
+    public AppServicesRoot App { get; private set; }
+
+    public RunEventBus Events { get; private set; }
+    public EntityManager Entities { get; private set; }
+    public CombatSystem Combat { get; private set; }
+
+    public GameManager GameManager { get; private set; }
+    public EnemySpawnSystem Spawner { get; private set; }
+
+    public void Initialize(AppServicesRoot app)
     {
-        
+        App = app;
+
+        Events = new RunEventBus();
+        Entities = new EntityManager();
+        Combat = new CombatSystem();
+
+        GameManager = new GameManager(this);
+
+        Spawner = gameObject.AddComponent<EnemySpawnSystem>();
+        Spawner.Construct(this);
     }
 
-    // Update is called once per frame
-    void Update()
+    private void OnDestroy()
     {
-        
+        Events?.Dispose();
+        Entities?.Dispose();
     }
 }
