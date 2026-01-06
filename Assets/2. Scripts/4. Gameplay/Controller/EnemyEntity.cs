@@ -22,8 +22,13 @@ public sealed class EnemyEntity : MonoBehaviour
     private void OnDead()
     {
         _scope.Entities.UnregisterEnemy(this);
-        Destroy(gameObject);
+
+        if (GameRoot.Instance != null && GameRoot.Instance.EnemyPrefab != null)
+            _scope.App.Pool.Despawn(gameObject, GameRoot.Instance.EnemyPrefab.gameObject);
+        else
+            Destroy(gameObject);
     }
+
 
     private void OnDestroy()
     {

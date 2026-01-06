@@ -26,6 +26,9 @@ public sealed class EnemySpawnSystem : MonoBehaviour
         if (_t >= interval)
         {
             _t = 0f;
+            if (GameRoot.Instance != null && _scope.Entities.Enemies.Count >= GameRoot.Instance.MaxEnemiesAlive)
+                return;
+
             SpawnOne();
         }
     }
@@ -65,7 +68,8 @@ public sealed class EnemySpawnSystem : MonoBehaviour
 
         if (GameRoot.Instance != null && GameRoot.Instance.EnemyPrefab != null)
         {
-            enemy = Instantiate(GameRoot.Instance.EnemyPrefab, pos, Quaternion.identity);
+            enemy = _scope.App.Pool.Spawn(GameRoot.Instance.EnemyPrefab, pos, Quaternion.identity);
+
         }
         else
         {

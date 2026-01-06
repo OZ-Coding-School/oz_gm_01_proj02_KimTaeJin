@@ -15,5 +15,10 @@ public sealed class PlayerEntity : MonoBehaviour
         var ability = GetComponent<AbilitySystem>();
         if (ability == null) ability = gameObject.AddComponent<AbilitySystem>();
         ability.Construct(_scope);
+
+        var melee = GetComponent<PlayerMeleeAutoAttack>();
+        if (melee == null) melee = gameObject.AddComponent<PlayerMeleeAutoAttack>();
+        melee.Construct(_scope);
+
     }
 }

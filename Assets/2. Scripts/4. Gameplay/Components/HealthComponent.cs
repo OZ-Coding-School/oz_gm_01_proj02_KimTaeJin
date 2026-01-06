@@ -3,13 +3,28 @@ using UnityEngine;
 
 public sealed class HealthComponent : MonoBehaviour
 {
+    [SerializeField] private int maxHp = 20;   
+    [SerializeField] private bool resetOnEnable = true;
+
+    public int Max => maxHp;
     public int Current { get; private set; }
+
     private Action _onDead;
     private bool _dead;
 
+    private void OnEnable()
+    {
+        if (resetOnEnable)
+        {
+            _dead = false;
+            Current = maxHp;
+        }
+    }
+
     public void Initialize(int hp, Action onDead)
     {
-        Current = hp;
+        maxHp = hp;           
+        Current = maxHp;
         _onDead = onDead;
         _dead = false;
     }
@@ -22,7 +37,6 @@ public sealed class HealthComponent : MonoBehaviour
         if (Current <= 0)
         {
             _dead = true;
-            Debug.Log("[Health] Dead");
             _onDead?.Invoke();
         }
     }
