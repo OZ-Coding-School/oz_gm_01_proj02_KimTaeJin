@@ -25,7 +25,9 @@ public sealed class GameRoot : MonoBehaviour
     public LayerMask GroundMask => groundMask;
     public float GroundRayHeight => groundRayHeight;
     public float GroundExtraOffset => groundExtraOffset;
-
+    //==================================================
+    [SerializeField] private int maxEnemiesAlive = 60;
+    public int MaxEnemiesAlive => maxEnemiesAlive;
     private void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
