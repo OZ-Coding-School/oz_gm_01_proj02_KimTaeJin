@@ -1,18 +1,19 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-public class PlayerEntity : MonoBehaviour
+public sealed class PlayerEntity : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
+    private RunScope _scope;
 
-    // Update is called once per frame
-    void Update()
+    public void Construct(RunScope scope)
     {
-        
+        _scope = scope;
+
+        var controller = GetComponent<PlayerController>();
+        if (controller == null) controller = gameObject.AddComponent<PlayerController>();
+        controller.Initialize(speed: 6f);
+
+        var ability = GetComponent<AbilitySystem>();
+        if (ability == null) ability = gameObject.AddComponent<AbilitySystem>();
+        ability.Construct(_scope);
     }
 }

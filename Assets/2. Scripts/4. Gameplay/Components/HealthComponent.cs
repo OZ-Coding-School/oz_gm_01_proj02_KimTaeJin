@@ -1,18 +1,29 @@
-using System.Collections;
-using System.Collections.Generic;
+using System;
 using UnityEngine;
 
-public class HealthComponent : MonoBehaviour
+public sealed class HealthComponent : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
+    public int Current { get; private set; }
+    private Action _onDead;
+    private bool _dead;
+
+    public void Initialize(int hp, Action onDead)
     {
-        
+        Current = hp;
+        _onDead = onDead;
+        _dead = false;
     }
 
-    // Update is called once per frame
-    void Update()
+    public void ApplyDamage(int amount)
     {
-        
+        if (_dead) return;
+
+        Current -= amount;
+        if (Current <= 0)
+        {
+            _dead = true;
+            Debug.Log("[Health] Dead");
+            _onDead?.Invoke();
+        }
     }
 }

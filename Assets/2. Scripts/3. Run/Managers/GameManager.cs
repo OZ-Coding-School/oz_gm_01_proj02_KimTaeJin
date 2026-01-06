@@ -1,18 +1,34 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-public class GameManager : MonoBehaviour
+public sealed class GameManager
 {
-    // Start is called before the first frame update
-    void Start()
+    private readonly RunScope _scope;
+
+    public GameManager(RunScope scope) => _scope = scope;
+
+    public void StartRun()
     {
-        
+        Debug.Log("[GameManager] StartRun");
+
+        PlayerEntity player;
+
+        //없을때 더미 관련
+        if (GameRoot.Instance != null && GameRoot.Instance.PlayerPrefab != null)
+        {
+            player = Object.Instantiate(GameRoot.Instance.PlayerPrefab, Vector3.zero, Quaternion.identity);
+        }
+        else
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            go.name = "Player";
+            go.transform.position = Vector3.zero;
+            player = go.AddComponent<PlayerEntity>();
+        }
+
+        player.Construct(_scope);
+        _scope.Entities.RegisterPlayer(player);
+
+        _scope.Spawner.Begin();
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
 }

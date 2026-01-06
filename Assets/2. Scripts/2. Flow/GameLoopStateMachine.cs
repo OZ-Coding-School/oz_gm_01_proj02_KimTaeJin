@@ -1,18 +1,28 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+using System;
 
-public class GameLoopStateMachine : MonoBehaviour
+public sealed class GameLoopStateMachine : IDisposable
 {
-    // Start is called before the first frame update
-    void Start()
+    private IGameState _current;
+    private AppServicesRoot _app;
+
+    public void Boot(AppServicesRoot app)
     {
-        
+        _app = app;
+        ChangeState(new BootState(this));
     }
 
-    // Update is called once per frame
-    void Update()
+    public void ChangeState(IGameState next)
     {
-        
+        _current?.Exit();
+        _current = next;
+        _current?.Enter(_app);
+    }
+
+    public void Tick() => _current?.Tick();
+
+    public void Dispose()
+    {
+        _current?.Exit();
+        _current = null;
     }
 }
