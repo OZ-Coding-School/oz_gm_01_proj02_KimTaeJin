@@ -15,13 +15,14 @@ public sealed class GameManager
         //없을때 더미 관련
         if (GameRoot.Instance != null && GameRoot.Instance.PlayerPrefab != null)
         {
-            player = Object.Instantiate(GameRoot.Instance.PlayerPrefab, Vector3.zero, Quaternion.identity);
+            player = Object.Instantiate(GameRoot.Instance.PlayerPrefab, Vector3.up * 5f, Quaternion.identity);
+
         }
         else
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             go.name = "Player";
-            go.transform.position = Vector3.zero;
+            go.transform.position = Vector3.up * 5f;
             player = go.AddComponent<PlayerEntity>();
         }
         if (GameRoot.Instance != null)
