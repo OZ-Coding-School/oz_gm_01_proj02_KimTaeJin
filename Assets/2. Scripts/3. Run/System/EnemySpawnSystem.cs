@@ -49,25 +49,17 @@ public sealed class EnemySpawnSystem : MonoBehaviour
             }
         }
 
-        float halfH = 0.5f;
         float extra = (GameRoot.Instance != null) ? GameRoot.Instance.GroundExtraOffset : 0.02f;
 
+        float bottomOffset = 0.5f; // fallback
         if (GameRoot.Instance != null && GameRoot.Instance.EnemyPrefab != null)
         {
             var prefabCol = GameRoot.Instance.EnemyPrefab.GetComponent<Collider>();
             if (prefabCol != null)
-            {
-                float ext = prefabCol.bounds.extents.y;
-                if (ext > 0.0001f) halfH = ext;
-                else
-                {
-                    if (prefabCol is CapsuleCollider cap) halfH = (cap.height * 0.5f) * cap.transform.lossyScale.y;
-                    else if (prefabCol is BoxCollider box) halfH = (box.size.y * 0.5f) * box.transform.lossyScale.y;
-                }
-            }
+                bottomOffset = GetColliderBottomOffset(prefabCol, GameRoot.Instance.EnemyPrefab.transform);
         }
+        Vector3 pos = new Vector3(xz.x, groundY + bottomOffset + extra, xz.z);
 
-        Vector3 pos = new Vector3(xz.x, groundY + halfH + extra, xz.z);
 
         EnemyEntity enemy;
 
@@ -107,6 +99,22 @@ public sealed class EnemySpawnSystem : MonoBehaviour
         _scope.Entities.RegisterEnemy(enemy);
     }
 
+    private static float GetColliderBottomOffset(Collider col, Transform tr)
+    {
+        float sy = tr.lossyScale.y;
+
+        switch (col)
+        {
+            case CapsuleCollider cap:
+                return (cap.height * 0.5f - cap.center.y) * sy;
+            case BoxCollider box:
+                return (box.size.y * 0.5f - box.center.y) * sy;
+            case SphereCollider sph:
+                return (sph.radius - sph.center.y) * sy;
+            default:
+                return col.bounds.extents.y;
+        }
+    }
 
     private bool TryGetGroundY(Vector3 xzPos, out float groundY)
     {
