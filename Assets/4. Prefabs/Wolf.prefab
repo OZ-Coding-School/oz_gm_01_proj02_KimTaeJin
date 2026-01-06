@@ -234,11 +234,11 @@ GameObject:
   m_Component:
   - component: {fileID: 4338622942973516331}
   - component: {fileID: 4557435746744317985}
-  - component: {fileID: 3413605470744224424}
   - component: {fileID: 8852406337978742280}
   - component: {fileID: 1492698167869543580}
   - component: {fileID: 4653412202657934170}
   - component: {fileID: 775260515897237731}
+  - component: {fileID: -8601469090686581574}
   m_Layer: 6
   m_Name: Wolf
   m_TagString: Untagged
@@ -289,22 +289,6 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!114 &3413605470744224424
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2976488976939424527}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 49d52bcdbc3577c44bb597d9d74e57ee, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  visual: {fileID: 0}
-  animator: {fileID: 0}
-  rotateLerp: 12
-  moveThreshold: 0.02
 --- !u!54 &8852406337978742280
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -379,6 +363,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: afae46bfc80690b4db2c90b6a877e33e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  maxHp: 20
+  resetOnEnable: 1
+--- !u!114 &-8601469090686581574
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2976488976939424527}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 47f36ecec1c58974ab296bc4abd97858, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  visual: {fileID: 0}
+  animator: {fileID: 0}
+  rotateLerp: 12
+  moveThreshold: 0.02
 --- !u!1 &3015076852773432452
 GameObject:
   m_ObjectHideFlags: 0
