@@ -223,7 +223,7 @@ ParticleSystem:
       serializedVersion: 2
       minMaxState: 0
       minColor: {r: 1, g: 1, b: 1, a: 1}
-      maxColor: {r: 0.754717, g: 0.754717, b: 0.754717, a: 0.65882355}
+      maxColor: {r: 1, g: 0, b: 0.77397394, a: 0.65882355}
       maxGradient:
         serializedVersion: 2
         key0: {r: 1, g: 1, b: 1, a: 1}
@@ -1376,7 +1376,7 @@ ParticleSystem:
       maxGradient:
         serializedVersion: 2
         key0: {r: 1, g: 1, b: 1, a: 0}
-        key1: {r: 1, g: 0, b: 0, a: 1}
+        key1: {r: 0.7944945, g: 0.12941965, b: 0.82641506, a: 1}
         key2: {r: 1, g: 0, b: 0, a: 0}
         key3: {r: 0, g: 0, b: 0, a: 0}
         key4: {r: 0, g: 0, b: 0, a: 0}
@@ -1400,7 +1400,7 @@ ParticleSystem:
         atime6: 0
         atime7: 0
         m_Mode: 0
-        m_ColorSpace: -1
+        m_ColorSpace: 0
         m_NumColorKeys: 2
         m_NumAlphaKeys: 3
       minGradient:
@@ -14785,7 +14785,7 @@ ParticleSystem:
       serializedVersion: 2
       minMaxState: 0
       minColor: {r: 1, g: 1, b: 1, a: 1}
-      maxColor: {r: 1, g: 1, b: 1, a: 1}
+      maxColor: {r: 0.9101796, g: 0, b: 1, a: 1}
       maxGradient:
         serializedVersion: 2
         key0: {r: 1, g: 1, b: 1, a: 1}
@@ -19128,9 +19128,9 @@ ParticleSystem:
       maxColor: {r: 1, g: 1, b: 1, a: 1}
       maxGradient:
         serializedVersion: 2
-        key0: {r: 1, g: 0, b: 0, a: 1}
+        key0: {r: 0.4015561, g: 0.013705931, b: 0.6603774, a: 1}
         key1: {r: 3.482202, g: 3.482202, b: 3.482202, a: 0}
-        key2: {r: 1, g: 0, b: 0, a: 0}
+        key2: {r: 0.8393369, g: 0, b: 0.93207544, a: 0}
         key3: {r: 0.009433985, g: 0, b: 0.0007399181, a: 0}
         key4: {r: 0.009433985, g: 0, b: 0.0007399181, a: 0}
         key5: {r: 0, g: 0, b: 0, a: 0}
@@ -19140,7 +19140,7 @@ ParticleSystem:
         ctime1: 5889
         ctime2: 10638
         ctime3: 30773
-        ctime4: 34002
+        ctime4: 30773
         ctime5: 0
         ctime6: 0
         ctime7: 0
@@ -19153,7 +19153,7 @@ ParticleSystem:
         atime6: 0
         atime7: 0
         m_Mode: 0
-        m_ColorSpace: -1
+        m_ColorSpace: 0
         m_NumColorKeys: 4
         m_NumAlphaKeys: 2
       minGradient:
@@ -19700,7 +19700,7 @@ ParticleSystem:
       serializedVersion: 2
       minMaxState: 0
       minColor: {r: 1, g: 1, b: 1, a: 1}
-      maxColor: {r: 1, g: 1, b: 1, a: 1}
+      maxColor: {r: 0.9340658, g: 0, b: 1, a: 1}
       maxGradient:
         serializedVersion: 2
         key0: {r: 1, g: 1, b: 1, a: 1}
@@ -20853,7 +20853,7 @@ ParticleSystem:
       maxGradient:
         serializedVersion: 2
         key0: {r: 1, g: 1, b: 1, a: 0}
-        key1: {r: 1, g: 0, b: 0, a: 1}
+        key1: {r: 1, g: 0, b: 0.8574238, a: 1}
         key2: {r: 1, g: 0, b: 0, a: 1}
         key3: {r: 0, g: 0, b: 0, a: 0}
         key4: {r: 0, g: 0, b: 0, a: 0}
@@ -20877,7 +20877,7 @@ ParticleSystem:
         atime6: 0
         atime7: 0
         m_Mode: 0
-        m_ColorSpace: -1
+        m_ColorSpace: 0
         m_NumColorKeys: 2
         m_NumAlphaKeys: 4
       minGradient:
@@ -28931,9 +28931,9 @@ ParticleSystem:
       maxColor: {r: 1, g: 1, b: 1, a: 1}
       maxGradient:
         serializedVersion: 2
-        key0: {r: 1, g: 0, b: 0, a: 1}
+        key0: {r: 0.41475332, g: 0.10690636, b: 0.6226415, a: 1}
         key1: {r: 3.482202, g: 3.482202, b: 3.482202, a: 0}
-        key2: {r: 1, g: 0, b: 0, a: 0}
+        key2: {r: 0.6043084, g: 0, b: 0.7660377, a: 0}
         key3: {r: 0.009433985, g: 0, b: 0.0007399181, a: 0}
         key4: {r: 0.009433985, g: 0, b: 0.0007399181, a: 0}
         key5: {r: 0, g: 0, b: 0, a: 0}
@@ -28941,7 +28941,7 @@ ParticleSystem:
         key7: {r: 0, g: 0, b: 0, a: 0}
         ctime0: 3799
         ctime1: 5889
-        ctime2: 10638
+        ctime2: 10871
         ctime3: 30773
         ctime4: 34002
         ctime5: 0
@@ -28956,7 +28956,7 @@ ParticleSystem:
         atime6: 0
         atime7: 0
         m_Mode: 0
-        m_ColorSpace: -1
+        m_ColorSpace: 0
         m_NumColorKeys: 3
         m_NumAlphaKeys: 2
       minGradient:

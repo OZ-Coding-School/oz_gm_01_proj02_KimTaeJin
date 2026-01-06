@@ -452,79 +452,6 @@ MonoBehaviour:
   m_LightCookieSize: {x: 1, y: 1}
   m_LightCookieOffset: {x: 0, y: 0}
   m_SoftShadowQuality: 2
---- !u!1001 &467039797
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 7003956829500086952, guid: dfad9b1e3cd2c84428bba31e382f630d,
-        type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7003956829500086952, guid: dfad9b1e3cd2c84428bba31e382f630d,
-        type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 1.65
-      objectReference: {fileID: 0}
-    - target: {fileID: 7003956829500086952, guid: dfad9b1e3cd2c84428bba31e382f630d,
-        type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7003956829500086952, guid: dfad9b1e3cd2c84428bba31e382f630d,
-        type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 7003956829500086952, guid: dfad9b1e3cd2c84428bba31e382f630d,
-        type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7003956829500086952, guid: dfad9b1e3cd2c84428bba31e382f630d,
-        type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7003956829500086952, guid: dfad9b1e3cd2c84428bba31e382f630d,
-        type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7003956829500086952, guid: dfad9b1e3cd2c84428bba31e382f630d,
-        type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7003956829500086952, guid: dfad9b1e3cd2c84428bba31e382f630d,
-        type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7003956829500086952, guid: dfad9b1e3cd2c84428bba31e382f630d,
-        type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7672125009476075538, guid: dfad9b1e3cd2c84428bba31e382f630d,
-        type: 3}
-      propertyPath: m_Name
-      value: Yui (Player)
-      objectReference: {fileID: 0}
-    - target: {fileID: 8410954537305632231, guid: dfad9b1e3cd2c84428bba31e382f630d,
-        type: 3}
-      propertyPath: m_Constraints
-      value: 80
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: dfad9b1e3cd2c84428bba31e382f630d, type: 3}
 --- !u!1 &498994495
 GameObject:
   m_ObjectHideFlags: 0
@@ -554,7 +481,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 77b1687fa56ff1c4fae3a8e9b54af30e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerPrefab: {fileID: 7301649579519821196, guid: dfad9b1e3cd2c84428bba31e382f630d,
+  playerPrefab: {fileID: 4989049703003665718, guid: dfad9b1e3cd2c84428bba31e382f630d,
     type: 3}
   enemyPrefab: {fileID: 4653412202657934170, guid: d6227645f4a7cf4469bdfd8db1f7891e,
     type: 3}
@@ -1175,4 +1102,3 @@ SceneRoots:
   - {fileID: 498994497}
   - {fileID: 1620185976}
   - {fileID: 804728402}
-  - {fileID: 467039797}

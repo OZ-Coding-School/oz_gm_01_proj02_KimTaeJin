@@ -2,23 +2,26 @@ using UnityEngine;
 
 public sealed class PlayerController : MonoBehaviour
 {
-    private float _moveSpeed = 6f;
-    private float _turnSpeed = 720f; 
+    [Header("Move")]
+    [SerializeField] private float _turnSpeed = 720f;
+
+    private float _baseMoveSpeed;  
+    private float _moveSpeedMul = 1f; 
 
     private Rigidbody _rb;
     private Animator _anim;
 
     private static readonly int MoveSpeedHash = Animator.StringToHash("MoveSpeed");
-
-    public void Initialize(float speed)
-    {
-        _moveSpeed = speed;
-    }
+    public float CurrentMoveSpeed => _baseMoveSpeed * _moveSpeedMul;
+    public void SetBaseMoveSpeed(float baseSpeed) => _baseMoveSpeed = Mathf.Max(0f, baseSpeed);
+    public void SetMoveSpeedMultiplier(float mul) => _moveSpeedMul = Mathf.Max(0f, mul);
+    public void AddMoveSpeedMultiplier(float add) => _moveSpeedMul = Mathf.Max(0f, _moveSpeedMul + add);
 
     private void Awake()
     {
         _rb = GetComponent<Rigidbody>();
         _anim = GetComponentInChildren<Animator>();
+        if (_anim != null) _anim.applyRootMotion = false;
     }
 
     private void FixedUpdate()
@@ -29,12 +32,10 @@ public sealed class PlayerController : MonoBehaviour
         Vector3 inputDir = new Vector3(x, 0f, z);
         if (inputDir.sqrMagnitude > 1f) inputDir.Normalize();
 
-        Vector3 delta = inputDir * (_moveSpeed * Time.fixedDeltaTime);
+        Vector3 delta = inputDir * (CurrentMoveSpeed * Time.fixedDeltaTime);
 
-        if (_rb != null)
-            _rb.MovePosition(_rb.position + delta);
-        else
-            transform.position += delta;
+        if (_rb != null) _rb.MovePosition(_rb.position + delta);
+        else transform.position += delta;
 
         if (inputDir.sqrMagnitude > 0.0001f)
         {
@@ -52,13 +53,9 @@ public sealed class PlayerController : MonoBehaviour
         }
 
         if (_anim != null)
-            _anim.SetFloat(MoveSpeedHash, inputDir.magnitude);
-        if (_anim != null)
-            _anim.applyRootMotion = false;
-
+        {
+            float animMove = inputDir.magnitude * _moveSpeedMul;
+            _anim.SetFloat(MoveSpeedHash, animMove);
+        }
     }
-    private void OnAnimatorMove()
-    {
-    }
-
 }
