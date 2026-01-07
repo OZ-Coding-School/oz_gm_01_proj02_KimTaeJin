@@ -12,22 +12,24 @@ public sealed class GameManager
 
         PlayerEntity player;
 
-        //없을때 더미 관련
+        Vector3 spawnPos = Vector3.zero; 
+
         if (GameRoot.Instance != null && GameRoot.Instance.PlayerPrefab != null)
         {
-            player = Object.Instantiate(GameRoot.Instance.PlayerPrefab, Vector3.up * 5f, Quaternion.identity);
-
+            player = Object.Instantiate(GameRoot.Instance.PlayerPrefab, spawnPos, Quaternion.identity);
         }
         else
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             go.name = "Player";
-            go.transform.position = Vector3.up * 5f;
+            go.transform.position = spawnPos;
             player = go.AddComponent<PlayerEntity>();
         }
+
         if (GameRoot.Instance != null)
         {
-            var col = player.GetComponent<Collider>();
+            var col = player.GetComponentInChildren<Collider>(true);
+
             GroundSnap.TrySnapToGround(
                 player.transform,
                 col,
@@ -36,10 +38,12 @@ public sealed class GameManager
                 GameRoot.Instance.GroundExtraOffset
             );
         }
+
         player.Construct(_scope);
         _scope.Entities.RegisterPlayer(player);
 
         _scope.Spawner.Begin();
     }
+
 
 }
