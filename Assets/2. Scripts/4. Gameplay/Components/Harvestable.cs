@@ -12,11 +12,13 @@ public sealed class Harvestable : MonoBehaviour
 
     private int _hp;
     private JellyPunch _jelly;
+    private HitFlashURP _flash;  
 
     private void Awake()
     {
         _hp = maxHp;
         _jelly = GetComponent<JellyPunch>();
+        _flash = GetComponent<HitFlashURP>();
     }
 
     public void TakeHit(int damage, Vector3 from)
@@ -24,11 +26,13 @@ public sealed class Harvestable : MonoBehaviour
         if (_hp <= 0) return;
 
         _jelly?.Play();
+        _flash?.Play(); 
 
         _hp -= Mathf.Max(1, damage);
         if (_hp <= 0)
             Die();
     }
+
     private void Die()
     {
         if (dropPrefab != null)

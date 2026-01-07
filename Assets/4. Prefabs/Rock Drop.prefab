@@ -137,4 +137,4 @@ MonoBehaviour:
   flyTime: 0.22
   visual: {fileID: 0}
   groundScaleMul: 2
-  followerScaleMul: 1.2
+  followerScaleMul: 1

@@ -532,7 +532,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 24bdfaefbfe03344f8340f4402864c08, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  spacing: 2
+  spacing: 1.7
   recordStep: 0.1
   followSharpness: 14
   followHeight: 0.25
