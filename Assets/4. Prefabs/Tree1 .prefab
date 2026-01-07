@@ -104,10 +104,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   visual: {fileID: 0}
-  punchScale: {x: 0.18, y: -0.12, z: 0.18}
-  duration: 0.18
-  vibrato: 10
-  elasticity: 1
+  punchScale: {x: 0.26, y: -0.2, z: 0.26}
+  duration: 0.22
+  vibrato: 14
+  elasticity: 1.25
 --- !u!114 &4064270533814560610
 MonoBehaviour:
   m_ObjectHideFlags: 0
