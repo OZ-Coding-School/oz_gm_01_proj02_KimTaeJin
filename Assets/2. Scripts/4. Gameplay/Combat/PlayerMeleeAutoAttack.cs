@@ -1,7 +1,13 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public sealed class PlayerMeleeAutoAttack : MonoBehaviour
 {
+    [Header("Harvest (나무/돌 등)")]
+    [SerializeField] private LayerMask harvestMask;
+    [SerializeField] private int harvestDamage = 1;
+
+
     [Header("Tuning")]
     [SerializeField] private float attackRange = 4.0f;   
     [SerializeField] private float hitRadius = 2.0f;        
@@ -80,6 +86,19 @@ public sealed class PlayerMeleeAutoAttack : MonoBehaviour
 
             _scope.Combat.DealDamage(e, damage);
             _scope.Combat.Knockback(e, p, knockbackForce);
+        }
+        var cols = Physics.OverlapSphere(p, hitRadius, harvestMask, QueryTriggerInteraction.Ignore);
+        if (cols != null && cols.Length > 0)
+        {
+            var set = new HashSet<Harvestable>();
+            for (int i = 0; i < cols.Length; i++)
+            {
+                var h = cols[i].GetComponentInParent<Harvestable>();
+                if (h != null) set.Add(h);
+            }
+
+            foreach (var h in set)
+                h.TakeHit(harvestDamage, p);
         }
     }
 #if UNITY_EDITOR

@@ -6,7 +6,7 @@ public sealed class EnemyEntity : MonoBehaviour
     private bool _constructed;
 
     public void Construct(RunScope scope)
-    {
+    { 
         _scope = scope;
         _constructed = true;
 

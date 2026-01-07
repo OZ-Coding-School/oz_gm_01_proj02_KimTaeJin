@@ -3,6 +3,7 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class PlayerEntity : MonoBehaviour
 {
+
     [Header("Base Stats (ONLY HERE)")]
     [SerializeField] private float _baseMoveSpeed = 12f;
 
@@ -11,6 +12,7 @@ public sealed class PlayerEntity : MonoBehaviour
     public PlayerController Controller { get; private set; }
     public AbilitySystem Ability { get; private set; }
     public PlayerMeleeAutoAttack Melee { get; private set; }
+    public PlayerHarvestAutoAttack Harvest { get; private set; }
 
     public void Construct(RunScope scope)
     {
@@ -24,6 +26,8 @@ public sealed class PlayerEntity : MonoBehaviour
 
         Melee = GetOrAdd<PlayerMeleeAutoAttack>();
         Melee.Construct(_scope);
+        Harvest = GetOrAdd<PlayerHarvestAutoAttack>();
+        Harvest.Construct(_scope);
     }
     public void SetMoveSpeedMultiplier(float mul) => Controller?.SetMoveSpeedMultiplier(mul);
     public void AddMoveSpeedMultiplier(float add) => Controller?.AddMoveSpeedMultiplier(add);
