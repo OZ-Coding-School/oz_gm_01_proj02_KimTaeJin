@@ -13,6 +13,16 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree Drop
       objectReference: {fileID: 0}
+    - target: {fileID: -1698088381482086445, guid: f827e11c01f0f7e499f3ad091c55fb2c,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -1698088381482086445, guid: f827e11c01f0f7e499f3ad091c55fb2c,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2774220344278030320, guid: f827e11c01f0f7e499f3ad091c55fb2c,
         type: 3}
       propertyPath: m_LocalScale.x
@@ -46,12 +56,12 @@ PrefabInstance:
     - target: {fileID: 2774220344278030320, guid: f827e11c01f0f7e499f3ad091c55fb2c,
         type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.7071068
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2774220344278030320, guid: f827e11c01f0f7e499f3ad091c55fb2c,
         type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.7071068
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2774220344278030320, guid: f827e11c01f0f7e499f3ad091c55fb2c,
         type: 3}

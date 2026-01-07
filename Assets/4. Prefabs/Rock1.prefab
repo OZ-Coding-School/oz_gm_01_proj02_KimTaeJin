@@ -11,7 +11,7 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: a054fccf24782ce46963279c575d0ac3,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: 6.9
+      value: 13.11
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a054fccf24782ce46963279c575d0ac3,
         type: 3}
@@ -84,6 +84,10 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 760363588161471180}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: a054fccf24782ce46963279c575d0ac3,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5851540890604164614}
   m_SourcePrefab: {fileID: 100100000, guid: a054fccf24782ce46963279c575d0ac3, type: 3}
 --- !u!1 &895757205720842676 stripped
 GameObject:
@@ -106,7 +110,7 @@ CapsuleCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
@@ -129,7 +133,7 @@ MonoBehaviour:
   maxHp: 3
   dropPrefab: {fileID: -8055167878551782068, guid: db8c8811ba38fa0419a1c5bb700338bf,
     type: 3}
-  dropCount: 3
+  dropCount: 1
   dropScatterRadius: 0.6
 --- !u!114 &760363588161471180
 MonoBehaviour:
@@ -148,3 +152,21 @@ MonoBehaviour:
   duration: 0.22
   vibrato: 14
   elasticity: 1.25
+--- !u!114 &5851540890604164614
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 895757205720842676}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db787a728a49dfe40b233ce1b35c1fe3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  pulses: 1
+  onTime: 0.1
+  offTime: 0
+  flashBaseColor: {r: 1, g: 1, b: 1, a: 1}
+  useEmission: 1
+  emissionIntensity: 1
