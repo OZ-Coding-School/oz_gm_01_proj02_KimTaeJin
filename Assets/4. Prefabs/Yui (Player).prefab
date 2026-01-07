@@ -31,6 +31,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 7003956829500086952}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &5752772578733619521
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1836482182038329571}
+  m_Layer: 7
+  m_Name: Harvest Attack Point
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1836482182038329571
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5752772578733619521}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.664, z: 0.52}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7003956829500086952}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &7402146327099571523
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -62,7 +93,7 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: 66a16ba60163fcd49a0d1dbcdf04bfc2,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -6.43
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 66a16ba60163fcd49a0d1dbcdf04bfc2,
         type: 3}
@@ -238,6 +269,11 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 7
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 66a16ba60163fcd49a0d1dbcdf04bfc2,
+        type: 3}
+      propertyPath: m_TagString
+      value: Player
+      objectReference: {fileID: 0}
     - target: {fileID: 1082271958561512970, guid: 66a16ba60163fcd49a0d1dbcdf04bfc2,
         type: 3}
       propertyPath: m_Layer
@@ -320,6 +356,10 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 8011269748815203390}
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 66a16ba60163fcd49a0d1dbcdf04bfc2,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1836482182038329571}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 66a16ba60163fcd49a0d1dbcdf04bfc2,
         type: 3}
@@ -345,6 +385,14 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 4989049703003665718}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 66a16ba60163fcd49a0d1dbcdf04bfc2,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4954458928580215494}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 66a16ba60163fcd49a0d1dbcdf04bfc2,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 403605467610091721}
   m_SourcePrefab: {fileID: 100100000, guid: 66a16ba60163fcd49a0d1dbcdf04bfc2, type: 3}
 --- !u!4 &7003956829500086952 stripped
 Transform:
@@ -445,6 +493,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d249c64707fd357429341deae7a53711, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  harvestMask:
+    serializedVersion: 2
+    m_Bits: 512
+  harvestDamage: 1
   attackRange: 4
   hitRadius: 4
   attacksPerSecond: 1.5
@@ -468,3 +520,51 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _baseMoveSpeed: 10
+--- !u!114 &4954458928580215494
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7672125009476075538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 24bdfaefbfe03344f8340f4402864c08, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  spacing: 2
+  recordStep: 0.1
+  followSharpness: 14
+  followHeight: 0.25
+  lockYToPlayer: 1
+  maxFollowers: 9
+  stackExtraIntoLast: 1
+  wiggleAmplitude: 0.25
+  wiggleSpeed: 6
+  wigglePhase: 0.65
+  speedForFullWiggle: 6
+--- !u!114 &403605467610091721
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7672125009476075538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 533b86328ee17e6498cbb5d604ebb2de, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  harvestRange: 4
+  hitRadius: 4
+  harvestMask:
+    serializedVersion: 2
+    m_Bits: 512
+  attacksPerSecond: 2.5
+  harvestDamage: 1
+  rotateToTargetSpeed: 18
+  animator: {fileID: 0}
+  vfxSocket: {fileID: 1836482182038329571}
+  harvestVfxPrefab: {fileID: 5484218944294176571, guid: 9cb35763d5968614684df764f22039a5,
+    type: 3}
+  vfxLifeTime: 1

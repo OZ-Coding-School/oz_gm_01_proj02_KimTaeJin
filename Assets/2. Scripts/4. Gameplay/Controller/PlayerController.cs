@@ -22,6 +22,15 @@ public sealed class PlayerController : MonoBehaviour
         _rb = GetComponent<Rigidbody>();
         _anim = GetComponentInChildren<Animator>();
         if (_anim != null) _anim.applyRootMotion = false;
+
+        if (_rb != null)
+        {
+            _rb.useGravity = false;
+            _rb.isKinematic = false;
+            _rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
+            _rb.interpolation = RigidbodyInterpolation.Interpolate;
+            _rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+        }
     }
 
     private void FixedUpdate()
@@ -34,8 +43,16 @@ public sealed class PlayerController : MonoBehaviour
 
         Vector3 delta = inputDir * (CurrentMoveSpeed * Time.fixedDeltaTime);
 
-        if (_rb != null) _rb.MovePosition(_rb.position + delta);
-        else transform.position += delta;
+        if (_rb != null)
+        {
+            Vector3 next = _rb.position + delta;
+            next.y = _rb.position.y;
+            _rb.MovePosition(next);
+        }
+        else
+        {
+            transform.position += delta;
+        }
 
         if (inputDir.sqrMagnitude > 0.0001f)
         {
@@ -58,4 +75,5 @@ public sealed class PlayerController : MonoBehaviour
             _anim.SetFloat(MoveSpeedHash, animMove);
         }
     }
+
 }
