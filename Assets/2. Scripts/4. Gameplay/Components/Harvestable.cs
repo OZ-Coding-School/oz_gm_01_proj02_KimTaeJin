@@ -12,13 +12,18 @@ public sealed class Harvestable : MonoBehaviour
 
     private int _hp;
     private JellyPunch _jelly;
-    private HitFlashURP _flash;  
+    private HitFlashURP _flash;
 
     private void Awake()
     {
-        _hp = maxHp;
         _jelly = GetComponent<JellyPunch>();
         _flash = GetComponent<HitFlashURP>();
+    }
+
+    private void OnEnable()
+    {
+        _hp = maxHp;               
+        //_flash?.StopAndRestore();   
     }
 
     public void TakeHit(int damage, Vector3 from)
@@ -26,11 +31,10 @@ public sealed class Harvestable : MonoBehaviour
         if (_hp <= 0) return;
 
         _jelly?.Play();
-        _flash?.Play(); 
+        _flash?.Play();
 
         _hp -= Mathf.Max(1, damage);
-        if (_hp <= 0)
-            Die();
+        if (_hp <= 0) Die();
     }
 
     private void Die()
@@ -39,12 +43,15 @@ public sealed class Harvestable : MonoBehaviour
         {
             for (int i = 0; i < dropCount; i++)
             {
-                Vector2 r = Random.insideUnitCircle * dropScatterRadius;
+                Vector2 r = UnityEngine.Random.insideUnitCircle * dropScatterRadius;
                 Vector3 pos = transform.position + new Vector3(r.x, 0f, r.y);
                 Instantiate(dropPrefab, pos, Quaternion.identity);
             }
         }
 
-        Destroy(gameObject);
+        if (GameRoot.Instance != null && GameRoot.Instance.Pool != null)
+            GameRoot.Instance.Pool.Despawn(gameObject);
+        else
+            gameObject.SetActive(false);
     }
 }

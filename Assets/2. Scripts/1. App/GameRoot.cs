@@ -28,6 +28,8 @@ public sealed class GameRoot : MonoBehaviour
     //==================================================
     [SerializeField] private int maxEnemiesAlive = 60;
     public int MaxEnemiesAlive => maxEnemiesAlive;
+    public PoolService Pool => _app.Pool;
+
     private void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }

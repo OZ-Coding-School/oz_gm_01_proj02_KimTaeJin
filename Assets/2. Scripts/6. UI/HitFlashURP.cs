@@ -110,6 +110,10 @@ public sealed class HitFlashURP : MonoBehaviour
         RestoreAll();
         _co = null;
     }
+    private void OnDisable()
+    {
+        StopAndRestore();
+    }
 
     private void SetAll(Color baseColor, Color emissionColor)
     {
@@ -131,6 +135,7 @@ public sealed class HitFlashURP : MonoBehaviour
 
     private void RestoreAll()
     {
+        if (_renderers == null || _cache == null || _mpb == null) return;
         for (int i = 0; i < _renderers.Length; i++)
         {
             var r = _renderers[i];
@@ -146,4 +151,14 @@ public sealed class HitFlashURP : MonoBehaviour
             r.SetPropertyBlock(_mpb);
         }
     }
+    public void StopAndRestore()
+    {
+        if (_co != null)
+        {
+            StopCoroutine(_co);
+            _co = null;
+        }
+        RestoreAll();
+    }
+
 }
