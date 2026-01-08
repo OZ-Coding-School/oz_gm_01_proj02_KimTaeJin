@@ -13,6 +13,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree Drop
       objectReference: {fileID: 0}
+    - target: {fileID: -5899813878577056728, guid: f827e11c01f0f7e499f3ad091c55fb2c,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: c7ee9159f85fc2d4c8ab75e999691ff2, type: 2}
     - target: {fileID: -1698088381482086445, guid: f827e11c01f0f7e499f3ad091c55fb2c,
         type: 3}
       propertyPath: m_LocalRotation.w
