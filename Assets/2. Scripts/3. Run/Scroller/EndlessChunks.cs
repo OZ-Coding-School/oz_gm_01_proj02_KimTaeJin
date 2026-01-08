@@ -74,6 +74,14 @@ public sealed class EndlessChunks : MonoBehaviour
             enabled = false;
             return;
         }
+        if (nodesParents == null || nodesParents.Length != chunkRoots.Length)
+            nodesParents = new Transform[chunkRoots.Length];
+
+        for (int i = 0; i < chunkRoots.Length; i++)
+        {
+            if (nodesParents[i] == null && chunkRoots[i] != null)
+                nodesParents[i] = chunkRoots[i].Find("Nodes Visual");
+        }
 
         if (nodesParents == null || nodesParents.Length != chunkRoots.Length)
             Debug.LogError("[EndlessChunks] nodesParents length mismatch with chunkRoots.");
@@ -320,6 +328,12 @@ public sealed class EndlessChunks : MonoBehaviour
                 spawnedTr = Instantiate(prefab, pos, s.rotation).transform;
 
             spawnedTr.SetParent(parent, true);
+            if (snapToGround)
+            {
+                var col = spawnedTr.GetComponentInChildren<Collider>();
+                GroundSnap.TrySnapToGround(spawnedTr, col, groundMask, rayHeight, 0.02f);
+            }
+
 
             _spawnedByChunk[chunkIndex].Add(new Spawned { go = spawnedTr.gameObject, prefab = prefab });
             used.Add(pos);
