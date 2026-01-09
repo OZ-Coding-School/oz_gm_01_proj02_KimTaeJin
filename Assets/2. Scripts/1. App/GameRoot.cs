@@ -9,6 +9,30 @@ public sealed class GameRoot : MonoBehaviour
     [SerializeField] private PlayerEntity playerPrefab;
     [SerializeField] private EnemyEntity enemyPrefab;
 
+    [Header("Build/Tower Catalog")]
+    [SerializeField] private TowerDefinitionSO[] towerCatalog;
+    [SerializeField] private int startGold = 50;
+
+    [Header("Build/Grid")]
+    [SerializeField] private float buildCellSize = 2f;
+    [SerializeField] private Vector3 buildGridOrigin = Vector3.zero;
+    [SerializeField] private Transform buildAnchor;
+    [SerializeField] private Vector3 buildAnchorOffset = Vector3.zero;
+    [SerializeField] private int buildWidth = 9;
+    [SerializeField] private int buildHeight = 10;
+    [SerializeField] private bool buildCenter = true;
+
+    public TowerDefinitionSO[] TowerCatalog => towerCatalog;
+    public int StartGold => startGold;
+    public float BuildCellSize => buildCellSize;
+    public Vector3 BuildGridOrigin => buildGridOrigin;
+    public Transform BuildAnchor => buildAnchor;
+    public Vector3 BuildAnchorOffset => buildAnchorOffset;
+    public int BuildWidth => buildWidth;
+    public int BuildHeight => buildHeight;
+    public bool BuildCenter => buildCenter;
+
+
     [SerializeField] private float spawnInterval = 1.5f;
     [SerializeField] private float spawnRadius = 10f;
 
@@ -39,7 +63,12 @@ public sealed class GameRoot : MonoBehaviour
         Debug.Log("[GameRoot] Awake");
 
         _app = new AppServicesRoot();
-        _app.Initialize();
+
+        var poolRoot = new GameObject("[PoolRoot]").transform;
+        poolRoot.SetParent(transform, false);
+
+        _app.Initialize(poolRoot);
+
 
         _loop = new GameLoopStateMachine();
         _loop.Boot(_app);
