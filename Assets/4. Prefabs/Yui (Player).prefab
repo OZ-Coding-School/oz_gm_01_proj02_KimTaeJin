@@ -497,8 +497,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 512
   harvestDamage: 1
-  attackRange: 4
-  hitRadius: 4
+  attackRange: 6
+  hitRadius: 6
   attacksPerSecond: 1.5
   damage: 10
   knockbackForce: 3
@@ -555,8 +555,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 533b86328ee17e6498cbb5d604ebb2de, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  harvestRange: 4
-  hitRadius: 4
+  harvestRange: 6
+  hitRadius: 6
   harvestMask:
     serializedVersion: 2
     m_Bits: 512
