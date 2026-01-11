@@ -1,8 +1,11 @@
-﻿using UnityEngine;
+﻿using DG.Tweening;
+using UnityEngine;
 
 public sealed class TowerBuildSystem : MonoBehaviour
 {
     private RunScope _scope;
+    [SerializeField] private float dropHeight = 1.8f;
+    [SerializeField] private float dropDuration = 0.22f;
 
     public void Construct(RunScope scope) => _scope = scope;
 
@@ -12,6 +15,45 @@ public sealed class TowerBuildSystem : MonoBehaviour
         if (_scope.Grid == null) return false;
         if (!_scope.Grid.IsInBounds(cell)) return false;
         if (_scope.Grid.IsOccupied(cell)) return false;
+        return true;
+    }
+
+    public bool CanPlaceOffsetDetailed(TowerDefinitionSO def, Vector2Int offset, out string reason)
+    {
+        reason = "";
+        if (_scope == null)
+        {
+            reason = "RunScope is null";
+            return false;
+        }
+        if (def == null)
+        {
+            reason = "TowerDefinitionSO is null";
+            return false;
+        }
+        if (def.prefab == null)
+        {
+            reason = "TowerDefinitionSO.prefab is null";
+            return false;
+        }
+        if (_scope.Grid == null)
+        {
+            reason = "GridSystem is null";
+            return false;
+        }
+
+        Vector2Int cell = _scope.Grid.CenterCell + offset;
+        if (!_scope.Grid.IsInBounds(cell))
+        {
+            reason = $"Out of bounds cell={cell}";
+            return false;
+        }
+        if (_scope.Grid.IsOccupied(cell))
+        {
+            reason = $"Cell occupied cell={cell}";
+            return false;
+        }
+
         return true;
     }
 
@@ -78,6 +120,8 @@ public sealed class TowerBuildSystem : MonoBehaviour
         _scope.Entities.RegisterTower(tower);
         _scope.Grid.TryOccupy(cell);
 
+        PlayDropTween(tower.transform, pos);
+
         towerEntity = tower;
         return true;
     }
@@ -106,5 +150,14 @@ public sealed class TowerBuildSystem : MonoBehaviour
             default:
                 return col.bounds.extents.y;
         }
+    }
+
+    private void PlayDropTween(Transform t, Vector3 targetPos)
+    {
+        if (t == null) return;
+        if (dropHeight <= 0f || dropDuration <= 0f) return;
+
+        t.position = targetPos + Vector3.up * dropHeight;
+        t.DOMove(targetPos, dropDuration).SetEase(Ease.OutQuad);
     }
 }

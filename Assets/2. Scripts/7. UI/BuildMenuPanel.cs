@@ -16,6 +16,7 @@ public sealed class BuildMenuPanel : MonoBehaviour
 
     [Header("Grid View")]
     [SerializeField] private PanelGridView gridView;
+    [SerializeField] private PanelPreview3D preview3D;
 
     [Header("Options (3)")]
     [SerializeField] private TowerBuildButton[] optionButtons;
@@ -41,6 +42,7 @@ public sealed class BuildMenuPanel : MonoBehaviour
     [SerializeField] private Color cannotPlaceColor = new Color(1f, 0.2f, 0.2f, 0.8f);
     [SerializeField] private KeyCode confirmKey = KeyCode.Return;
     [SerializeField] private KeyCode cancelKey = KeyCode.Escape;
+    [SerializeField] private float exitDelayAfterPlace = 1f;
 
     private RunScope _scope;
     private readonly List<TowerDefinitionSO> _draft = new();
@@ -53,6 +55,8 @@ public sealed class BuildMenuPanel : MonoBehaviour
     private bool _useMouse;
     private Vector2 _lastMousePos;
     private int _selectedIndex = -1;
+    private bool _pendingClose;
+    private Coroutine _closeRoutine;
     private Tween _panelFade;
     private Tween _dimFade;
 
@@ -60,6 +64,7 @@ public sealed class BuildMenuPanel : MonoBehaviour
     {
         if (root == null) root = gameObject;
         if (gridView == null) gridView = GetComponentInChildren<PanelGridView>(true);
+        if (preview3D == null) preview3D = GetComponentInChildren<PanelPreview3D>(true);
 
         if (rerollButton != null) rerollButton.onClick.AddListener(OnRerollClicked);
         if (closeButton != null) closeButton.onClick.AddListener(ExitBuildMode);
@@ -91,6 +96,7 @@ public sealed class BuildMenuPanel : MonoBehaviour
 
     private void Update()
     {
+        if (_pendingClose) return;
         if (!_placing)
         {
             HandleOptionNavigation();
@@ -146,7 +152,19 @@ public sealed class BuildMenuPanel : MonoBehaviour
             {
                 bool placed = _scope.TowerBuild.TryPlaceTowerOffset(_placingDef, offset, Quaternion.identity);
                 if (placed)
-                    ExitBuildMode();
+                {
+                    _pendingClose = true;
+                    if (preview3D != null)
+                        preview3D.SetPlacementTint(canPlaceColor);
+                    StartCloseDelay();
+                }
+            }
+            else
+            {
+                if (_scope.TowerBuild.CanPlaceOffsetDetailed(_placingDef, offset, out string reason))
+                    reason = "Unknown";
+                Vector2Int center = _scope.Grid != null ? _scope.Grid.CenterCell : Vector2Int.zero;
+                Debug.LogWarning($"[BuildMenuPanel] Cannot place. offset={offset} center={center} reason={reason}");
             }
         }
     }
@@ -162,19 +180,29 @@ public sealed class BuildMenuPanel : MonoBehaviour
         TryBindScope();
         if (_scope == null) return;
 
+        _pendingClose = false;
+        StopCloseDelay();
         ShowPanel(true);
 
         _scope.Events.PushBuildMode(this);
+
+        if (preview3D != null)
+            preview3D.SyncFromGridView(gridView);
 
         BindEconomy();
         Draft();
         ClearSelection();
         EnsureDefaultSelection();
+
+        if (preview3D != null)
+            preview3D.ShowCenter();
     }
 
     private void ClosePanelOnly()
     {
         CancelPlacement();
+        _pendingClose = false;
+        StopCloseDelay();
         ShowPanel(false);
         UnbindEconomy();
     }
@@ -356,12 +384,21 @@ public sealed class BuildMenuPanel : MonoBehaviour
 
         SetButtonsForPlacement(clicked);
 
-        if (placementPreviewRect != null)
-            placementPreviewRect.gameObject.SetActive(true);
-        if (placementPreviewImage != null)
+        if (preview3D != null)
         {
-            placementPreviewImage.sprite = (_placingDef.preview != null) ? _placingDef.preview : _placingDef.icon;
-            placementPreviewImage.color = canPlaceColor;
+            preview3D.SetPlacementPrefab(_placingDef.prefab != null ? _placingDef.prefab.gameObject : null);
+            preview3D.SetPlacementFootprint(_placingDef.footprint);
+            preview3D.SetPlacementActive(true);
+        }
+        else
+        {
+            if (placementPreviewRect != null)
+                placementPreviewRect.gameObject.SetActive(true);
+            if (placementPreviewImage != null)
+            {
+                placementPreviewImage.sprite = (_placingDef.preview != null) ? _placingDef.preview : _placingDef.icon;
+                placementPreviewImage.color = canPlaceColor;
+            }
         }
 
         UpdatePlacementPreview(GetDefaultPlacementCell());
@@ -389,14 +426,23 @@ public sealed class BuildMenuPanel : MonoBehaviour
             _hasPlacementCell = true;
         }
 
-        if (placementPreviewRect == null || gridView == null) return;
-
-        placementPreviewRect.anchoredPosition = gridView.CellToLocalCenter(cell);
+        if (gridView == null) return;
 
         Vector2Int offset = GetOffsetFromCenter(cell);
         bool can = _scope.TowerBuild != null && _scope.TowerBuild.CanPlaceOffset(_placingDef, offset);
-        if (placementPreviewImage != null)
-            placementPreviewImage.color = can ? canPlaceColor : cannotPlaceColor;
+
+        if (preview3D != null)
+        {
+            preview3D.SetPlacementCell(cell, !_useMouse);
+            preview3D.SetPlacementTint(can ? canPlaceColor : cannotPlaceColor);
+        }
+        else
+        {
+            if (placementPreviewRect == null) return;
+            placementPreviewRect.anchoredPosition = gridView.CellToLocalCenter(cell);
+            if (placementPreviewImage != null)
+                placementPreviewImage.color = can ? canPlaceColor : cannotPlaceColor;
+        }
     }
 
     private bool TryGetMouseCell(out Vector2Int cell)
@@ -415,11 +461,36 @@ public sealed class BuildMenuPanel : MonoBehaviour
         _placing = false;
         _placingDef = null;
         _hasPlacementCell = false;
+        _pendingClose = false;
+        StopCloseDelay();
 
-        if (placementPreviewRect != null)
+        if (preview3D != null)
+            preview3D.SetPlacementActive(false);
+        else if (placementPreviewRect != null)
             placementPreviewRect.gameObject.SetActive(false);
 
         RestoreButtonsAfterPlacement();
+    }
+
+    private void StartCloseDelay()
+    {
+        StopCloseDelay();
+        _closeRoutine = StartCoroutine(CloseAfterDelay());
+    }
+
+    private void StopCloseDelay()
+    {
+        if (_closeRoutine != null)
+            StopCoroutine(_closeRoutine);
+        _closeRoutine = null;
+    }
+
+    private System.Collections.IEnumerator CloseAfterDelay()
+    {
+        float delay = Mathf.Max(0f, exitDelayAfterPlace);
+        if (delay > 0f)
+            yield return new WaitForSecondsRealtime(delay);
+        ExitBuildMode();
     }
 
     private void SetButtonsForPlacement(TowerBuildButton selected)

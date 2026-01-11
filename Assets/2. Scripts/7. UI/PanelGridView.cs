@@ -10,6 +10,8 @@ public sealed class PanelGridView : MonoBehaviour
     [SerializeField] private float cellWidth = 64f;
     [SerializeField] private float cellHeight = 64f;
     [SerializeField] private bool autoResize = true;
+    [SerializeField] private bool autoFitCellSizeFromRect = false;
+    [SerializeField] private float minCellSize = 8f;
 
     [Header("Lines (Optional)")]
     [SerializeField] private Image linePrefab;
@@ -28,9 +30,22 @@ public sealed class PanelGridView : MonoBehaviour
     private void Awake()
     {
         if (gridRoot == null) gridRoot = (RectTransform)transform;
-        if (autoResize)
+        if (autoFitCellSizeFromRect)
+        {
+            UpdateCellSizeFromRect();
+        }
+        else if (autoResize)
+        {
             gridRoot.sizeDelta = new Vector2(width * cellWidth, height * cellHeight);
+        }
 
+        RebuildLines();
+    }
+
+    private void OnRectTransformDimensionsChange()
+    {
+        if (!autoFitCellSizeFromRect) return;
+        UpdateCellSizeFromRect();
         RebuildLines();
     }
 
@@ -70,6 +85,17 @@ public sealed class PanelGridView : MonoBehaviour
             line.color = lineColor;
             _lines.Add(rt);
         }
+    }
+
+    private void UpdateCellSizeFromRect()
+    {
+        if (gridRoot == null) return;
+        float w = gridRoot.rect.width;
+        float h = gridRoot.rect.height;
+        if (w <= 0f || h <= 0f) return;
+
+        cellWidth = Mathf.Max(minCellSize, w / Mathf.Max(1, width));
+        cellHeight = Mathf.Max(minCellSize, h / Mathf.Max(1, height));
     }
 
     public Vector2 CellToLocalCenter(Vector2Int cell)

@@ -14,6 +14,8 @@ public sealed class TowerDefinitionSO : ScriptableObject
 
     [Header("Prefab")]
     public TowerEntity prefab;
+    [Tooltip("Grid footprint in cells (width, height).")]
+    public Vector2Int footprint = new Vector2Int(1, 1);
 
     [Header("Cost")]
     public int cost = 5;
