@@ -19,6 +19,7 @@ public sealed class BaseFootprintOverlay : MonoBehaviour
     private readonly List<Vector3> _verts = new();
     private readonly List<int> _tris = new();
     private readonly List<Vector2> _uvs = new();
+    private readonly List<Vector2Int> _cells = new();
 
     public void Construct(RunScope scope)
     {
@@ -75,11 +76,35 @@ public sealed class BaseFootprintOverlay : MonoBehaviour
         if (_mesh == null || _scope == null || _scope.Grid == null) return;
         if (_reserver == null) return;
 
+        if (_reserver.TryGetOccupiedCells(_cells) && _cells.Count > 0)
+        {
+            RebuildCells(_cells);
+            return;
+        }
+
         if (!_reserver.TryGetCellRect(out Vector2Int min, out Vector2Int max))
         {
             _mesh.Clear();
             return;
         }
+        _cells.Clear();
+        for (int yCell = min.y; yCell <= max.y; yCell++)
+            for (int xCell = min.x; xCell <= max.x; xCell++)
+                _cells.Add(new Vector2Int(xCell, yCell));
+
+        RebuildCells(_cells);
+
+        if (_mr != null && _mr.material != null)
+        {
+            var m = _mr.material;
+            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", color);
+            if (m.HasProperty("_Color")) m.SetColor("_Color", color);
+        }
+    }
+
+    private void RebuildCells(List<Vector2Int> cells)
+    {
+        if (_mesh == null || _scope == null || _scope.Grid == null) return;
 
         _verts.Clear(); _tris.Clear(); _uvs.Clear();
 
@@ -88,42 +113,35 @@ public sealed class BaseFootprintOverlay : MonoBehaviour
         float inset = half * Mathf.Clamp01(cellShrink);
 
         int v = 0;
-        for (int yCell = min.y; yCell <= max.y; yCell++)
-            for (int xCell = min.x; xCell <= max.x; xCell++)
-            {
-                Vector3 c = _scope.Grid.CellToWorldCenter(new Vector2Int(xCell, yCell));
+        for (int i = 0; i < cells.Count; i++)
+        {
+            Vector2Int cell = cells[i];
+            Vector3 c = _scope.Grid.CellToWorldCenter(cell);
 
-                float x0 = c.x - half + inset;
-                float x1 = c.x + half - inset;
-                float z0 = c.z - half + inset;
-                float z1 = c.z + half - inset;
+            float x0 = c.x - half + inset;
+            float x1 = c.x + half - inset;
+            float z0 = c.z - half + inset;
+            float z1 = c.z + half - inset;
 
-                _verts.Add(new Vector3(x0, y, z0));
-                _verts.Add(new Vector3(x0, y, z1));
-                _verts.Add(new Vector3(x1, y, z1));
-                _verts.Add(new Vector3(x1, y, z0));
+            _verts.Add(new Vector3(x0, y, z0));
+            _verts.Add(new Vector3(x0, y, z1));
+            _verts.Add(new Vector3(x1, y, z1));
+            _verts.Add(new Vector3(x1, y, z0));
 
-                _uvs.Add(new Vector2(0, 0));
-                _uvs.Add(new Vector2(0, 1));
-                _uvs.Add(new Vector2(1, 1));
-                _uvs.Add(new Vector2(1, 0));
+            _uvs.Add(new Vector2(0, 0));
+            _uvs.Add(new Vector2(0, 1));
+            _uvs.Add(new Vector2(1, 1));
+            _uvs.Add(new Vector2(1, 0));
 
-                _tris.Add(v + 0); _tris.Add(v + 1); _tris.Add(v + 2);
-                _tris.Add(v + 0); _tris.Add(v + 2); _tris.Add(v + 3);
-                v += 4;
-            }
+            _tris.Add(v + 0); _tris.Add(v + 1); _tris.Add(v + 2);
+            _tris.Add(v + 0); _tris.Add(v + 2); _tris.Add(v + 3);
+            v += 4;
+        }
 
         _mesh.Clear();
         _mesh.SetVertices(_verts);
         _mesh.SetTriangles(_tris, 0);
         _mesh.SetUVs(0, _uvs);
         _mesh.RecalculateBounds();
-
-        if (_mr != null && _mr.material != null)
-        {
-            var m = _mr.material;
-            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", color);
-            if (m.HasProperty("_Color")) m.SetColor("_Color", color);
-        }
     }
 }

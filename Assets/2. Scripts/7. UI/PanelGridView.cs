@@ -19,6 +19,7 @@ public sealed class PanelGridView : MonoBehaviour
     [SerializeField] private Color lineColor = new Color(1f, 1f, 1f, 0.75f);
 
     private readonly List<RectTransform> _lines = new();
+    public event System.Action<PanelGridView> GridChanged;
 
     public int Width => width;
     public int Height => height;
@@ -40,13 +41,35 @@ public sealed class PanelGridView : MonoBehaviour
         }
 
         RebuildLines();
+        NotifyChanged();
     }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (Application.isPlaying) return;
+        if (gridRoot == null) gridRoot = (RectTransform)transform;
+
+        if (autoFitCellSizeFromRect)
+        {
+            UpdateCellSizeFromRect();
+        }
+        else if (autoResize)
+        {
+            gridRoot.sizeDelta = new Vector2(width * cellWidth, height * cellHeight);
+        }
+
+        RebuildLines();
+        NotifyChanged();
+    }
+#endif
 
     private void OnRectTransformDimensionsChange()
     {
         if (!autoFitCellSizeFromRect) return;
         UpdateCellSizeFromRect();
         RebuildLines();
+        NotifyChanged();
     }
 
     public void RebuildLines()
@@ -87,6 +110,17 @@ public sealed class PanelGridView : MonoBehaviour
         }
     }
 
+    public void Refresh()
+    {
+        if (gridRoot == null) gridRoot = (RectTransform)transform;
+        if (autoFitCellSizeFromRect)
+            UpdateCellSizeFromRect();
+        else if (autoResize)
+            gridRoot.sizeDelta = new Vector2(width * cellWidth, height * cellHeight);
+        RebuildLines();
+        NotifyChanged();
+    }
+
     private void UpdateCellSizeFromRect()
     {
         if (gridRoot == null) return;
@@ -96,6 +130,11 @@ public sealed class PanelGridView : MonoBehaviour
 
         cellWidth = Mathf.Max(minCellSize, w / Mathf.Max(1, width));
         cellHeight = Mathf.Max(minCellSize, h / Mathf.Max(1, height));
+    }
+
+    private void NotifyChanged()
+    {
+        GridChanged?.Invoke(this);
     }
 
     public Vector2 CellToLocalCenter(Vector2Int cell)

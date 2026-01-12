@@ -13,6 +13,7 @@ public sealed class RunScope : MonoBehaviour
     public GridSystem Grid { get; private set; }
     public TowerBuildSystem TowerBuild { get; private set; }
     public PlacementSystem Placement { get; private set; }
+    public BaseFootprintReserver BaseFootprintReserver { get; private set; }
 
     public GameManager GameManager { get; private set; }
     public EnemySpawnSystem Spawner { get; private set; }
@@ -64,6 +65,7 @@ public sealed class RunScope : MonoBehaviour
         Grid = grid;
         TowerBuild = towerBuild;
         Placement = placement;
+        BaseFootprintReserver = baseFootprintReserver;
         Spawner = spawner;
 
         if (grid != null && GameRoot.Instance != null)
@@ -78,6 +80,8 @@ public sealed class RunScope : MonoBehaviour
                 grid.Configure(GameRoot.Instance.BuildCellSize, GameRoot.Instance.BuildGridOrigin);
             }
         }
+
+        Grid?.ClearAll();
 
         buildMode?.Construct(this);
         buildModePause?.Construct(this);

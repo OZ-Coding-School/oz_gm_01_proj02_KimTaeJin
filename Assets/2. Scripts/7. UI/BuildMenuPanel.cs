@@ -35,8 +35,6 @@ public sealed class BuildMenuPanel : MonoBehaviour
     [SerializeField] private int rerollCost = 2;
 
     [Header("Placement Preview")]
-    [SerializeField] private RectTransform placementPreviewRect;
-    [SerializeField] private Image placementPreviewImage;
     [SerializeField] private Canvas placementCanvas;
     [SerializeField] private Color canPlaceColor = new Color(0.2f, 1f, 0.2f, 0.8f);
     [SerializeField] private Color cannotPlaceColor = new Color(1f, 0.2f, 0.2f, 0.8f);
@@ -59,12 +57,16 @@ public sealed class BuildMenuPanel : MonoBehaviour
     private Coroutine _closeRoutine;
     private Tween _panelFade;
     private Tween _dimFade;
+    private bool[,] _buildableMask;
+    private bool[,] _occupiedMask;
 
     private void Awake()
     {
         if (root == null) root = gameObject;
         if (gridView == null) gridView = GetComponentInChildren<PanelGridView>(true);
         if (preview3D == null) preview3D = GetComponentInChildren<PanelPreview3D>(true);
+        if (gridView != null)
+            gridView.GridChanged += OnGridChanged;
 
         if (rerollButton != null) rerollButton.onClick.AddListener(OnRerollClicked);
         if (closeButton != null) closeButton.onClick.AddListener(ExitBuildMode);
@@ -88,10 +90,13 @@ public sealed class BuildMenuPanel : MonoBehaviour
         if (placementCanvas == null)
             placementCanvas = GetComponentInParent<Canvas>();
 
-        if (placementPreviewRect != null)
-            placementPreviewRect.gameObject.SetActive(false);
-
         root.SetActive(false);
+    }
+
+    private void OnDestroy()
+    {
+        if (gridView != null)
+            gridView.GridChanged -= OnGridChanged;
     }
 
     private void Update()
@@ -103,7 +108,7 @@ public sealed class BuildMenuPanel : MonoBehaviour
             return;
         }
 
-        if (_scope == null || _scope.TowerBuild == null || gridView == null) return;
+        if (_scope == null || _scope.TowerBuild == null) return;
 
         if (Input.GetKeyDown(cancelKey) || Input.GetMouseButtonDown(1))
         {
@@ -138,8 +143,9 @@ public sealed class BuildMenuPanel : MonoBehaviour
         if (moved || !_hasPlacementCell)
         {
             _hasPlacementCell = true;
-            cell.x = Mathf.Clamp(cell.x, 0, gridView.Width - 1);
-            cell.y = Mathf.Clamp(cell.y, 0, gridView.Height - 1);
+            GetPlacementClamp(out Vector2Int minCell, out Vector2Int maxCell);
+            cell.x = Mathf.Clamp(cell.x, minCell.x, maxCell.x);
+            cell.y = Mathf.Clamp(cell.y, minCell.y, maxCell.y);
             _placingCell = cell;
         }
 
@@ -155,7 +161,12 @@ public sealed class BuildMenuPanel : MonoBehaviour
                 {
                     _pendingClose = true;
                     if (preview3D != null)
+                    {
                         preview3D.SetPlacementTint(canPlaceColor);
+                        preview3D.SetPlacementActive(false);
+                        preview3D.SyncPlacedTowers(_scope.Entities != null ? _scope.Entities.Towers : null);
+                        RefreshGridTiles();
+                    }
                     StartCloseDelay();
                 }
             }
@@ -163,7 +174,7 @@ public sealed class BuildMenuPanel : MonoBehaviour
             {
                 if (_scope.TowerBuild.CanPlaceOffsetDetailed(_placingDef, offset, out string reason))
                     reason = "Unknown";
-                Vector2Int center = _scope.Grid != null ? _scope.Grid.CenterCell : Vector2Int.zero;
+                Vector2Int center = GetCenterCell();
                 Debug.LogWarning($"[BuildMenuPanel] Cannot place. offset={offset} center={center} reason={reason}");
             }
         }
@@ -173,6 +184,12 @@ public sealed class BuildMenuPanel : MonoBehaviour
     {
         if (_scope != null) return;
         _scope = RunScopeLocator.Current;
+    }
+
+    private void OnGridChanged(PanelGridView grid)
+    {
+        if (preview3D == null || grid == null) return;
+        preview3D.SyncFromGridView(grid);
     }
 
     public void Open()
@@ -187,7 +204,24 @@ public sealed class BuildMenuPanel : MonoBehaviour
         _scope.Events.PushBuildMode(this);
 
         if (preview3D != null)
+        {
+            if (gridView != null)
+                gridView.Refresh();
+            preview3D.SetGridSystem(_scope.Grid);
             preview3D.SyncFromGridView(gridView);
+            var baseReserver = _scope.BaseFootprintReserver != null
+                ? _scope.BaseFootprintReserver
+                : _scope.GetComponent<BaseFootprintReserver>();
+            if (baseReserver != null && baseReserver.UseFixedFootprint)
+            {
+                if (baseReserver.UseFootprintMask && baseReserver.FixedFootprintMask != null)
+                    preview3D.SetCenterFootprint(baseReserver.FixedFootprintMask, baseReserver.EvenFootprintBiasPositive);
+                else
+                    preview3D.SetCenterFootprint(baseReserver.FixedFootprintSize, baseReserver.EvenFootprintBiasPositive);
+            }
+            preview3D.SyncPlacedTowers(_scope.Entities != null ? _scope.Entities.Towers : null);
+            RefreshGridTiles();
+        }
 
         BindEconomy();
         Draft();
@@ -205,6 +239,8 @@ public sealed class BuildMenuPanel : MonoBehaviour
         StopCloseDelay();
         ShowPanel(false);
         UnbindEconomy();
+        if (preview3D != null)
+            preview3D.ClearPlacedTowers();
     }
 
     public void ExitBuildMode()
@@ -384,38 +420,27 @@ public sealed class BuildMenuPanel : MonoBehaviour
 
         SetButtonsForPlacement(clicked);
 
-        if (preview3D != null)
-        {
-            preview3D.SetPlacementPrefab(_placingDef.prefab != null ? _placingDef.prefab.gameObject : null);
-            preview3D.SetPlacementFootprint(_placingDef.footprint);
-            preview3D.SetPlacementActive(true);
-        }
-        else
-        {
-            if (placementPreviewRect != null)
-                placementPreviewRect.gameObject.SetActive(true);
-            if (placementPreviewImage != null)
-            {
-                placementPreviewImage.sprite = (_placingDef.preview != null) ? _placingDef.preview : _placingDef.icon;
-                placementPreviewImage.color = canPlaceColor;
-            }
-        }
+        if (preview3D == null) return;
+        FootprintMaskUtility.GetFootprintData(_placingDef, out FootprintMaskSO mask, out Vector2Int size, out Vector2Int pivot);
+        preview3D.SetPlacementFootprint(mask, size, pivot);
+        preview3D.SetPlacementPrefab(_placingDef.prefab != null ? _placingDef.prefab.gameObject : null);
+        preview3D.SetPlacementActive(true);
 
         UpdatePlacementPreview(GetDefaultPlacementCell());
     }
 
     private Vector2Int GetDefaultPlacementCell()
     {
-        if (gridView == null)
-            return Vector2Int.zero;
-
-        return gridView.CenterCell;
+        Vector2Int cell = GetCenterCell();
+        GetPlacementClamp(out Vector2Int minCell, out Vector2Int maxCell);
+        cell.x = Mathf.Clamp(cell.x, minCell.x, maxCell.x);
+        cell.y = Mathf.Clamp(cell.y, minCell.y, maxCell.y);
+        return cell;
     }
 
     private Vector2Int GetOffsetFromCenter(Vector2Int cell)
     {
-        if (gridView == null) return Vector2Int.zero;
-        return cell - gridView.CenterCell;
+        return cell - GetCenterCell();
     }
 
     private void UpdatePlacementPreview(Vector2Int cell)
@@ -431,29 +456,90 @@ public sealed class BuildMenuPanel : MonoBehaviour
         Vector2Int offset = GetOffsetFromCenter(cell);
         bool can = _scope.TowerBuild != null && _scope.TowerBuild.CanPlaceOffset(_placingDef, offset);
 
-        if (preview3D != null)
-        {
-            preview3D.SetPlacementCell(cell, !_useMouse);
-            preview3D.SetPlacementTint(can ? canPlaceColor : cannotPlaceColor);
-        }
-        else
-        {
-            if (placementPreviewRect == null) return;
-            placementPreviewRect.anchoredPosition = gridView.CellToLocalCenter(cell);
-            if (placementPreviewImage != null)
-                placementPreviewImage.color = can ? canPlaceColor : cannotPlaceColor;
-        }
+        if (preview3D == null) return;
+        preview3D.SetPlacementCell(cell, !_useMouse);
+        preview3D.SetPlacementTint(can ? canPlaceColor : cannotPlaceColor);
     }
 
     private bool TryGetMouseCell(out Vector2Int cell)
     {
         cell = default;
-        if (gridView == null || placementCanvas == null) return false;
+        if (placementCanvas == null) return false;
         Camera cam = placementCanvas.renderMode == RenderMode.ScreenSpaceOverlay
             ? null
             : (placementCanvas.worldCamera != null ? placementCanvas.worldCamera : Camera.main);
 
+        if (preview3D != null && preview3D.TryScreenToCell(Input.mousePosition, placementCanvas, cam, out cell))
+            return true;
+
+        if (gridView == null) return false;
         return gridView.TryScreenToCell(Input.mousePosition, placementCanvas, cam, out cell);
+    }
+
+    private int GetGridWidth()
+    {
+        if (_scope != null && _scope.Grid != null) return _scope.Grid.Width;
+        if (gridView != null) return gridView.Width;
+        if (preview3D != null) return preview3D.GridWidth;
+        return 1;
+    }
+
+    private int GetGridHeight()
+    {
+        if (_scope != null && _scope.Grid != null) return _scope.Grid.Height;
+        if (gridView != null) return gridView.Height;
+        if (preview3D != null) return preview3D.GridHeight;
+        return 1;
+    }
+
+    private Vector2Int GetCenterCell()
+    {
+        TryBindScope();
+        if (_scope != null)
+        {
+            if (_scope.TowerBuild != null) return _scope.TowerBuild.GetAnchorCell();
+            if (_scope.Grid != null) return _scope.Grid.CenterCell;
+        }
+        if (gridView != null) return gridView.CenterCell;
+        if (preview3D != null) return preview3D.CenterCell;
+        return Vector2Int.zero;
+    }
+
+    private void GetPlacementClamp(out Vector2Int minCell, out Vector2Int maxCell)
+    {
+        int w = GetGridWidth();
+        int h = GetGridHeight();
+        FootprintMaskUtility.GetFootprintData(_placingDef, out _, out Vector2Int size, out Vector2Int pivot);
+        size.x = Mathf.Max(1, size.x);
+        size.y = Mathf.Max(1, size.y);
+        pivot.x = Mathf.Clamp(pivot.x, 0, size.x - 1);
+        pivot.y = Mathf.Clamp(pivot.y, 0, size.y - 1);
+
+        minCell = new Vector2Int(pivot.x, pivot.y);
+        maxCell = new Vector2Int(
+            Mathf.Max(minCell.x, w - size.x + pivot.x),
+            Mathf.Max(minCell.y, h - size.y + pivot.y));
+    }
+
+    private void RefreshGridTiles()
+    {
+        if (preview3D == null || _scope == null || _scope.Grid == null) return;
+        int w = _scope.Grid.Width;
+        int h = _scope.Grid.Height;
+
+        if (!EnsureGridMasks(w, h)) return;
+
+        BuildGridRules.ComputeBuildable(_scope.Grid, _buildableMask, _occupiedMask);
+        preview3D.SetTileStates(_buildableMask, _occupiedMask);
+    }
+
+    private bool EnsureGridMasks(int w, int h)
+    {
+        if (_buildableMask == null || _buildableMask.GetLength(0) != w || _buildableMask.GetLength(1) != h)
+            _buildableMask = new bool[w, h];
+        if (_occupiedMask == null || _occupiedMask.GetLength(0) != w || _occupiedMask.GetLength(1) != h)
+            _occupiedMask = new bool[w, h];
+        return true;
     }
 
     private void CancelPlacement()
@@ -466,8 +552,6 @@ public sealed class BuildMenuPanel : MonoBehaviour
 
         if (preview3D != null)
             preview3D.SetPlacementActive(false);
-        else if (placementPreviewRect != null)
-            placementPreviewRect.gameObject.SetActive(false);
 
         RestoreButtonsAfterPlacement();
     }

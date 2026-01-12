@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2047156462334203808}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: GroupStone_Slot3
   m_TagString: Untagged
   m_Icon: {fileID: 0}

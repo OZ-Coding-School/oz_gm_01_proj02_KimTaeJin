@@ -14,12 +14,29 @@ public sealed class TowerEntity : MonoBehaviour
     private TowerDefinitionSO _def;
     private float _cool;
     private bool _constructed;
+    private Vector2Int[] _occupiedCells;
 
     public Vector2Int Cell { get; private set; }
     public Vector2Int OffsetFromCenter { get; private set; }
+    public TowerDefinitionSO Definition => _def;
+    public Vector2Int Footprint { get; private set; } = Vector2Int.one;
 
     public void SetCell(Vector2Int cell) => Cell = cell;
     public void SetOffsetFromCenter(Vector2Int offset) => OffsetFromCenter = offset;
+    public void SetFootprint(Vector2Int footprint)
+    {
+        Footprint = new Vector2Int(Mathf.Max(1, footprint.x), Mathf.Max(1, footprint.y));
+    }
+
+    public void SetOccupiedCells(System.Collections.Generic.List<Vector2Int> cells)
+    {
+        if (cells == null || cells.Count == 0)
+        {
+            _occupiedCells = null;
+            return;
+        }
+        _occupiedCells = cells.ToArray();
+    }
 
     public void Construct(RunScope scope, TowerDefinitionSO def)
     {
@@ -131,7 +148,22 @@ public sealed class TowerEntity : MonoBehaviour
         if (_scope != null)
         {
             _scope.Entities?.UnregisterTower(this);
-            _scope.Grid?.Release(Cell);
+            if (_scope.Grid != null)
+            {
+                if (_occupiedCells != null && _occupiedCells.Length > 0)
+                {
+                    for (int i = 0; i < _occupiedCells.Length; i++)
+                        _scope.Grid.Release(_occupiedCells[i]);
+                }
+                else
+                {
+                    for (int y = 0; y < Footprint.y; y++)
+                    {
+                        for (int x = 0; x < Footprint.x; x++)
+                            _scope.Grid.Release(new Vector2Int(Cell.x + x, Cell.y + y));
+                    }
+                }
+            }
         }
     }
 }

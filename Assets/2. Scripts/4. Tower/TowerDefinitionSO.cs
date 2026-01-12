@@ -16,6 +16,8 @@ public sealed class TowerDefinitionSO : ScriptableObject
     public TowerEntity prefab;
     [Tooltip("Grid footprint in cells (width, height).")]
     public Vector2Int footprint = new Vector2Int(1, 1);
+    [Tooltip("Optional footprint mask for non-rect shapes.")]
+    public FootprintMaskSO footprintMask;
 
     [Header("Cost")]
     public int cost = 5;

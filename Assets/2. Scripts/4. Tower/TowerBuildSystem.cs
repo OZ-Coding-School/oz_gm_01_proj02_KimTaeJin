@@ -6,16 +6,34 @@ public sealed class TowerBuildSystem : MonoBehaviour
     private RunScope _scope;
     [SerializeField] private float dropHeight = 1.8f;
     [SerializeField] private float dropDuration = 0.22f;
+    private readonly System.Collections.Generic.List<Vector2Int> _cells = new();
 
     public void Construct(RunScope scope) => _scope = scope;
+
+    public Vector2Int GetAnchorCell()
+    {
+        if (_scope == null || _scope.Grid == null) return Vector2Int.zero;
+
+        var baseFootprint = _scope.BaseFootprintReserver;
+        if (baseFootprint != null && baseFootprint.UseFixedFootprint)
+        {
+            FootprintMaskSO mask = baseFootprint.UseFootprintMask ? baseFootprint.FixedFootprintMask : null;
+            if (mask != null && mask.IsValid)
+                return FootprintMaskUtility.GetCenteredAnchor(_scope.Grid, mask.Size, mask.Pivot, baseFootprint.EvenFootprintBiasPositive);
+
+            return FootprintMaskUtility.GetCenteredAnchor(_scope.Grid, baseFootprint.FixedFootprintSize, Vector2Int.zero,
+                baseFootprint.EvenFootprintBiasPositive);
+        }
+
+        return _scope.Grid.CenterCell;
+    }
 
     public bool CanPlace(TowerDefinitionSO def, Vector2Int cell)
     {
         if (_scope == null || def == null || def.prefab == null) return false;
         if (_scope.Grid == null) return false;
-        if (!_scope.Grid.IsInBounds(cell)) return false;
-        if (_scope.Grid.IsOccupied(cell)) return false;
-        return true;
+        FootprintMaskUtility.GetFootprintData(def, out FootprintMaskSO mask, out Vector2Int size, out Vector2Int pivot);
+        return BuildGridRules.CanPlaceFootprint(_scope.Grid, mask, size, pivot, cell);
     }
 
     public bool CanPlaceOffsetDetailed(TowerDefinitionSO def, Vector2Int offset, out string reason)
@@ -42,15 +60,27 @@ public sealed class TowerBuildSystem : MonoBehaviour
             return false;
         }
 
-        Vector2Int cell = _scope.Grid.CenterCell + offset;
-        if (!_scope.Grid.IsInBounds(cell))
+        Vector2Int cell = GetAnchorCell() + offset;
+        FootprintMaskUtility.GetFootprintData(def, out FootprintMaskSO mask, out Vector2Int size, out Vector2Int pivot);
+        FootprintMaskUtility.GetFootprintCells(mask, size, pivot, cell, _cells);
+        for (int i = 0; i < _cells.Count; i++)
         {
-            reason = $"Out of bounds cell={cell}";
-            return false;
+            Vector2Int c = _cells[i];
+            if (!_scope.Grid.IsInBounds(c))
+            {
+                reason = $"Out of bounds cell={c}";
+                return false;
+            }
+            if (_scope.Grid.IsOccupied(c))
+            {
+                reason = $"Cell occupied cell={c}";
+                return false;
+            }
         }
-        if (_scope.Grid.IsOccupied(cell))
+
+        if (!BuildGridRules.CanPlaceFootprint(_scope.Grid, mask, size, pivot, cell))
         {
-            reason = $"Cell occupied cell={cell}";
+            reason = "Not connected to build lines";
             return false;
         }
 
@@ -60,7 +90,7 @@ public sealed class TowerBuildSystem : MonoBehaviour
     public bool CanPlaceOffset(TowerDefinitionSO def, Vector2Int offset)
     {
         if (_scope == null || _scope.Grid == null) return false;
-        Vector2Int cell = _scope.Grid.CenterCell + offset;
+        Vector2Int cell = GetAnchorCell() + offset;
         return CanPlace(def, cell);
     }
 
@@ -70,7 +100,10 @@ public sealed class TowerBuildSystem : MonoBehaviour
         if (_scope == null || def == null || def.prefab == null) return false;
         if (_scope.Grid == null) return false;
 
+        FootprintMaskUtility.GetFootprintData(def, out FootprintMaskSO mask, out Vector2Int size, out Vector2Int pivot);
         Vector3 center = _scope.Grid.CellToWorldCenter(cell);
+        Vector3 offset = GetFootprintOffset(_scope.Grid, size, pivot);
+        center += offset;
 
         float groundY = center.y;
         if (GameRoot.Instance != null)
@@ -115,10 +148,14 @@ public sealed class TowerBuildSystem : MonoBehaviour
 
         tower.name = $"{def.id}_Tower";
         tower.SetCell(cell);
+        FootprintMaskUtility.GetFootprintData(def, out FootprintMaskSO mask, out Vector2Int size, out Vector2Int pivot);
+        tower.SetFootprint(size);
         tower.Construct(_scope, def);
 
         _scope.Entities.RegisterTower(tower);
-        _scope.Grid.TryOccupy(cell);
+        FootprintMaskUtility.GetFootprintCells(mask, size, pivot, cell, _cells);
+        tower.SetOccupiedCells(_cells);
+        OccupyCells(_cells);
 
         PlayDropTween(tower.transform, pos);
 
@@ -129,10 +166,30 @@ public sealed class TowerBuildSystem : MonoBehaviour
     public bool TryPlaceTowerOffset(TowerDefinitionSO def, Vector2Int offset, Quaternion rot)
     {
         if (_scope == null || _scope.Grid == null) return false;
-        Vector2Int cell = _scope.Grid.CenterCell + offset;
+        Vector2Int cell = GetAnchorCell() + offset;
         if (!TryPlaceTower(def, cell, rot, out TowerEntity tower)) return false;
         if (tower != null) tower.SetOffsetFromCenter(offset);
         return true;
+    }
+
+    private void OccupyCells(System.Collections.Generic.List<Vector2Int> cells)
+    {
+        if (_scope == null || _scope.Grid == null) return;
+        for (int i = 0; i < cells.Count; i++)
+            _scope.Grid.TryOccupy(cells[i]);
+    }
+
+    private Vector3 GetFootprintOffset(GridSystem grid, Vector2Int size, Vector2Int pivot)
+    {
+        if (grid == null) return Vector3.zero;
+        size.x = Mathf.Max(1, size.x);
+        size.y = Mathf.Max(1, size.y);
+        pivot.x = Mathf.Clamp(pivot.x, 0, size.x - 1);
+        pivot.y = Mathf.Clamp(pivot.y, 0, size.y - 1);
+
+        float ox = ((size.x - 1) * 0.5f - pivot.x) * grid.CellSize;
+        float oz = ((size.y - 1) * 0.5f - pivot.y) * grid.CellSize;
+        return new Vector3(ox, 0f, oz);
     }
 
     private static float GetColliderBottomOffset(Collider col, Transform tr)
