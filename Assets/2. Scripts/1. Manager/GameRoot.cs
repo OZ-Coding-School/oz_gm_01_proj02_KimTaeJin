@@ -15,6 +15,7 @@ public sealed class GameRoot : MonoBehaviour
 
     [Header("Build/Grid")]
     [SerializeField] private float buildCellSize = 2f;
+    [SerializeField] private float buildCellSizeZScale = 1f;
     [SerializeField] private bool autoBuildCellSize = false;
     [SerializeField] private GameObject buildCellSizePrefab;
     [SerializeField] private Vector2Int buildCellSizeFootprint = new Vector2Int(1, 1);
@@ -31,6 +32,7 @@ public sealed class GameRoot : MonoBehaviour
     public TowerDefinitionSO[] TowerCatalog => towerCatalog;
     public int StartGold => startGold;
     public float BuildCellSize => buildCellSize;
+    public float BuildCellSizeZScale => buildCellSizeZScale;
     public Vector3 BuildGridOrigin => buildGridOrigin;
     public Transform BuildAnchor => buildAnchor;
     public Vector3 BuildAnchorOffset => buildAnchorOffset;

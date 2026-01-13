@@ -72,12 +72,12 @@ public sealed class RunScope : MonoBehaviour
         {
             if (GameRoot.Instance.BuildAnchor != null)
             {
-                grid.Configure(GameRoot.Instance.BuildCellSize, GameRoot.Instance.BuildAnchor,
+                grid.Configure(GameRoot.Instance.BuildCellSize, GameRoot.Instance.BuildCellSizeZScale, GameRoot.Instance.BuildAnchor,
                     GameRoot.Instance.BuildWidth, GameRoot.Instance.BuildHeight, GameRoot.Instance.BuildAnchorOffset, GameRoot.Instance.BuildCenter);
             }
             else
             {
-                grid.Configure(GameRoot.Instance.BuildCellSize, GameRoot.Instance.BuildGridOrigin);
+                grid.Configure(GameRoot.Instance.BuildCellSize, GameRoot.Instance.BuildCellSizeZScale, GameRoot.Instance.BuildGridOrigin);
             }
         }
 

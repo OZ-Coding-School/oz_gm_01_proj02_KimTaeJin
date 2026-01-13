@@ -60,8 +60,8 @@ public sealed class FootprintVisualScaler : MonoBehaviour
         if (_baseBounds.size.x <= 0.0001f || _baseBounds.size.z <= 0.0001f)
             return;
 
-        float targetX = size.x * gridSystem.CellSize;
-        float targetZ = size.y * gridSystem.CellSize;
+        float targetX = size.x * gridSystem.CellSizeX;
+        float targetZ = size.y * gridSystem.CellSizeZ;
 
         float sx = targetX / _baseBounds.size.x;
         float sz = targetZ / _baseBounds.size.z;

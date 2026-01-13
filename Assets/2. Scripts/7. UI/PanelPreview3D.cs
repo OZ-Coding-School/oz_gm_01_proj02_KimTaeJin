@@ -156,7 +156,7 @@ public sealed class PanelPreview3D : MonoBehaviour
         }
         float baseScale = Mathf.Max(0.01f, gridWorldScale);
         if (useGridCellSize && gridSystem != null)
-            baseScale = Mathf.Max(0.01f, gridSystem.CellSize);
+            baseScale = Mathf.Max(0.01f, gridSystem.CellSizeX);
         cellWorldWidth = baseScale;
         if (useGridViewCellAspect)
         {

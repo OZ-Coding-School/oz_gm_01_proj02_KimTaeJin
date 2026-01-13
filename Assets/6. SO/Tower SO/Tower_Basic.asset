@@ -19,6 +19,7 @@ MonoBehaviour:
   description: OMG Tower
   prefab: {fileID: 7524775083283482169, guid: 6bdd11a4b5d56914aa120ba76280b7a4, type: 3}
   footprint: {x: 1, y: 1}
+  footprintMask: {fileID: 11400000, guid: 02d76eff3c6191e4ca27662bb87dad0f, type: 2}
   cost: 0
   range: 15
   fireInterval: 0.5

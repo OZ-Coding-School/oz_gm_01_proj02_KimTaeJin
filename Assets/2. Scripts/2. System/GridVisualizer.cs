@@ -77,28 +77,29 @@ public sealed class GridVisualizer : MonoBehaviour
 
         Vector3 origin = _scope.Grid.Origin;
         _lastOrigin = origin;
-        float size = _scope.Grid.CellSize;
+        float sizeX = _scope.Grid.CellSizeX;
+        float sizeZ = _scope.Grid.CellSizeZ;
         int w = _scope.Grid.Width;
         int h = _scope.Grid.Height;
 
         float x0 = origin.x;
         float z0 = origin.z;
-        float x1 = x0 + w * size;
-        float z1 = z0 + h * size;
+        float x1 = x0 + w * sizeX;
+        float z1 = z0 + h * sizeZ;
 
         int idx = 0;
 
         // 세로줄 (w+1)
         for (int i = 0; i <= w; i++)
         {
-            float x = x0 + i * size;
+            float x = x0 + i * sizeX;
             SetLine(_lines[idx++], new Vector3(x, y, z0), new Vector3(x, y, z1));
         }
 
         // 가로줄 (h+1)
         for (int j = 0; j <= h; j++)
         {
-            float z = z0 + j * size;
+            float z = z0 + j * sizeZ;
             SetLine(_lines[idx++], new Vector3(x0, y, z), new Vector3(x1, y, z));
         }
     }

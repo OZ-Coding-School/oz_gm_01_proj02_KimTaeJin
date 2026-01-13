@@ -108,9 +108,12 @@ public sealed class BaseFootprintOverlay : MonoBehaviour
 
         _verts.Clear(); _tris.Clear(); _uvs.Clear();
 
-        float size = _scope.Grid.CellSize;
-        float half = size * 0.5f;
-        float inset = half * Mathf.Clamp01(cellShrink);
+        float sizeX = _scope.Grid.CellSizeX;
+        float sizeZ = _scope.Grid.CellSizeZ;
+        float halfX = sizeX * 0.5f;
+        float halfZ = sizeZ * 0.5f;
+        float insetX = halfX * Mathf.Clamp01(cellShrink);
+        float insetZ = halfZ * Mathf.Clamp01(cellShrink);
 
         int v = 0;
         for (int i = 0; i < cells.Count; i++)
@@ -118,10 +121,10 @@ public sealed class BaseFootprintOverlay : MonoBehaviour
             Vector2Int cell = cells[i];
             Vector3 c = _scope.Grid.CellToWorldCenter(cell);
 
-            float x0 = c.x - half + inset;
-            float x1 = c.x + half - inset;
-            float z0 = c.z - half + inset;
-            float z1 = c.z + half - inset;
+            float x0 = c.x - halfX + insetX;
+            float x1 = c.x + halfX - insetX;
+            float z0 = c.z - halfZ + insetZ;
+            float z1 = c.z + halfZ - insetZ;
 
             _verts.Add(new Vector3(x0, y, z0));
             _verts.Add(new Vector3(x0, y, z1));

@@ -39,6 +39,8 @@ public sealed class FootprintVisualBaker : MonoBehaviour
     [Header("Anchors")]
     [SerializeField] private Transform anchorRoot;
     [SerializeField] private AnchorVisual[] anchorVisuals;
+    [SerializeField] private bool normalizeAnchorToCell = false;
+    [SerializeField] private float anchorScaleMultiplier = 1f;
 
     [Header("Rebuild")]
     [SerializeField] private bool clearBeforeRebuild = true;
@@ -73,7 +75,9 @@ public sealed class FootprintVisualBaker : MonoBehaviour
         }
 
         Vector2Int pivot = mask.Pivot;
-        float size = GetCellSize();
+        Vector2 size = GetCellSize();
+        float sizeX = size.x;
+        float sizeZ = size.y;
         float tileTop = 0f;
         if (useTileTopForVisualRoot)
             tileTop = GetPrefabTopY(baseTilePrefab);
@@ -97,15 +101,15 @@ public sealed class FootprintVisualBaker : MonoBehaviour
                 if (!mask.GetCell(x, y)) continue;
                 FootprintAnchorType anchorType = mask.GetAnchor(x, y);
                 if (ShouldSuppressBaseTile(anchorType)) continue;
-                Vector3 pos = CellToLocal(x, y, pivot, size) + baseTileOffset;
+                Vector3 pos = CellToLocal(x, y, pivot, sizeX, sizeZ) + baseTileOffset;
                 var tile = Instantiate(baseTilePrefab, basePlateRoot);
                 tile.name = $"Tile_{x}_{y}";
                 tile.transform.localRotation = Quaternion.identity;
                 Vector3 offset = Vector3.zero;
                 if (normalizeTileToCell && hasTileBounds)
                 {
-                    float sx = size / Mathf.Max(0.0001f, tileBounds.size.x);
-                    float sz = size / Mathf.Max(0.0001f, tileBounds.size.z);
+                    float sx = sizeX / Mathf.Max(0.0001f, tileBounds.size.x);
+                    float sz = sizeZ / Mathf.Max(0.0001f, tileBounds.size.z);
                     Vector3 scale = new Vector3(baseScale.x * sx, baseScale.y, baseScale.z * sz);
                     scale *= Mathf.Max(0.01f, tileScaleMultiplier);
                     tile.transform.localScale = scale;
@@ -129,16 +133,16 @@ public sealed class FootprintVisualBaker : MonoBehaviour
             {
                 for (int x = 0; x < mask.Width; x++)
                 {
-                    if (!mask.GetCell(x, y)) continue;
-                    Vector3 pos = CellToLocal(x, y, pivot, size) + boundsTileOffset;
-                    var tile = CreateBoundsTile(hideBoundsTiles);
-                    tile.name = $"Bounds_{x}_{y}";
-                    tile.transform.SetParent(boundsRoot, false);
-                    tile.transform.localPosition = pos + new Vector3(0f, boundsTileHeight * 0.5f, 0f);
-                    tile.transform.localRotation = Quaternion.identity;
-                    tile.transform.localScale = new Vector3(size, Mathf.Max(0.001f, boundsTileHeight), size);
-                }
+                if (!mask.GetCell(x, y)) continue;
+                Vector3 pos = CellToLocal(x, y, pivot, sizeX, sizeZ) + boundsTileOffset;
+                var tile = CreateBoundsTile(hideBoundsTiles);
+                tile.name = $"Bounds_{x}_{y}";
+                tile.transform.SetParent(boundsRoot, false);
+                tile.transform.localPosition = pos + new Vector3(0f, boundsTileHeight * 0.5f, 0f);
+                tile.transform.localRotation = Quaternion.identity;
+                tile.transform.localScale = new Vector3(sizeX, Mathf.Max(0.001f, boundsTileHeight), sizeZ);
             }
+        }
         }
 
         if (autoPlaceVisualRoot && visualRoot != null)
@@ -148,7 +152,7 @@ public sealed class FootprintVisualBaker : MonoBehaviour
             visualRoot.localPosition = lp;
         }
 
-        AutoPlaceGridAnchor(pivot, size);
+        AutoPlaceGridAnchor(pivot, sizeX, sizeZ);
 
         if (anchorVisuals == null || anchorVisuals.Length == 0) return;
 
@@ -160,27 +164,57 @@ public sealed class FootprintVisualBaker : MonoBehaviour
                 if (type == FootprintAnchorType.None) continue;
                 if (!TryGetAnchorVisual(type, out AnchorVisual visual) || visual.prefab == null) continue;
 
-                Vector3 pos = CellToLocal(x, y, pivot, size) + visual.localOffset;
+                Vector3 pos = CellToLocal(x, y, pivot, sizeX, sizeZ) + visual.localOffset;
                 var go = Instantiate(visual.prefab, anchorRoot);
                 go.name = $"{type}_{x}_{y}";
                 go.transform.localPosition = pos;
                 go.transform.localRotation = Quaternion.Euler(visual.localEuler);
-                go.transform.localScale = visual.prefab.transform.localScale;
+                if (normalizeAnchorToCell)
+                {
+                    Vector3 anchorBaseScale = visual.prefab.transform.localScale;
+                    Bounds anchorBounds = GetPrefabBounds(visual.prefab);
+                    if (anchorBounds.size.x > 0.0001f && anchorBounds.size.z > 0.0001f)
+                    {
+                        float targetX = sizeX;
+                        float targetZ = sizeZ;
+                        int yaw = Mathf.RoundToInt(visual.localEuler.y / 90f);
+                        if ((Mathf.Abs(yaw) % 2) == 1)
+                        {
+                            targetX = sizeZ;
+                            targetZ = sizeX;
+                        }
+
+                        float sx = targetX / anchorBounds.size.x;
+                        float sz = targetZ / anchorBounds.size.z;
+                        Vector3 scale = new Vector3(anchorBaseScale.x * sx, anchorBaseScale.y, anchorBaseScale.z * sz);
+                        scale *= Mathf.Max(0.01f, anchorScaleMultiplier);
+                        go.transform.localScale = scale;
+                    }
+                    else
+                    {
+                        go.transform.localScale = anchorBaseScale * Mathf.Max(0.01f, anchorScaleMultiplier);
+                    }
+                }
+                else
+                {
+                    go.transform.localScale = visual.prefab.transform.localScale;
+                }
             }
         }
     }
 
-    private float GetCellSize()
+    private Vector2 GetCellSize()
     {
         if (useGridCellSize && grid != null)
-            return Mathf.Max(0.001f, grid.CellSize);
-        return Mathf.Max(0.001f, cellSize);
+            return new Vector2(Mathf.Max(0.001f, grid.CellSizeX), Mathf.Max(0.001f, grid.CellSizeZ));
+        float size = Mathf.Max(0.001f, cellSize);
+        return new Vector2(size, size);
     }
 
-    private static Vector3 CellToLocal(int x, int y, Vector2Int pivot, float size)
+    private static Vector3 CellToLocal(int x, int y, Vector2Int pivot, float sizeX, float sizeZ)
     {
-        float lx = (x - pivot.x + 0.5f) * size;
-        float lz = (y - pivot.y + 0.5f) * size;
+        float lx = (x - pivot.x + 0.5f) * sizeX;
+        float lz = (y - pivot.y + 0.5f) * sizeZ;
         return new Vector3(lx, 0f, lz);
     }
 
@@ -270,12 +304,13 @@ public sealed class FootprintVisualBaker : MonoBehaviour
         return b;
     }
 
-    private void AutoPlaceGridAnchor(Vector2Int pivot, float size)
+    private void AutoPlaceGridAnchor(Vector2Int pivot, float sizeX, float sizeZ)
     {
         if (!autoPlaceGridAnchor || gridAnchor == null || mask == null || !mask.IsValid) return;
-        if (size <= 0.0001f) return;
+        if (sizeX <= 0.0001f || sizeZ <= 0.0001f) return;
 
-        float half = size * 0.5f;
+        float halfX = sizeX * 0.5f;
+        float halfZ = sizeZ * 0.5f;
         bool has = false;
         float minX = 0f;
         float maxX = 0f;
@@ -287,11 +322,11 @@ public sealed class FootprintVisualBaker : MonoBehaviour
             for (int x = 0; x < mask.Width; x++)
             {
                 if (!mask.GetCell(x, y)) continue;
-                Vector3 c = CellToLocal(x, y, pivot, size) + baseTileOffset;
-                float lx = c.x - half;
-                float rx = c.x + half;
-                float bz = c.z - half;
-                float fz = c.z + half;
+                Vector3 c = CellToLocal(x, y, pivot, sizeX, sizeZ) + baseTileOffset;
+                float lx = c.x - halfX;
+                float rx = c.x + halfX;
+                float bz = c.z - halfZ;
+                float fz = c.z + halfZ;
                 if (!has)
                 {
                     minX = lx;

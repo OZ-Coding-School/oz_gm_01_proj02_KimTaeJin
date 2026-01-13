@@ -187,8 +187,8 @@ public sealed class TowerBuildSystem : MonoBehaviour
         pivot.x = Mathf.Clamp(pivot.x, 0, size.x - 1);
         pivot.y = Mathf.Clamp(pivot.y, 0, size.y - 1);
 
-        float ox = ((size.x - 1) * 0.5f - pivot.x) * grid.CellSize;
-        float oz = ((size.y - 1) * 0.5f - pivot.y) * grid.CellSize;
+        float ox = ((size.x - 1) * 0.5f - pivot.x) * grid.CellSizeX;
+        float oz = ((size.y - 1) * 0.5f - pivot.y) * grid.CellSizeZ;
         return new Vector3(ox, 0f, oz);
     }
 
