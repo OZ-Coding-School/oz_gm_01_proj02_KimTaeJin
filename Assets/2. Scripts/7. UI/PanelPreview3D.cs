@@ -12,6 +12,7 @@ public sealed class PanelPreview3D : MonoBehaviour
     [SerializeField] private LayerMask previewLayer;
     [SerializeField] private bool transparentBackground = true;
     [SerializeField] private Color previewBackgroundColor = new Color(0f, 0f, 0f, 1f);
+    [SerializeField] private bool excludePreviewLayerFromMainCamera = true;
     [SerializeField] private bool autoResizeRenderTexture = true;
     [SerializeField] private float renderTextureScale = 1f;
     [SerializeField] private int renderTextureMinSize = 256;
@@ -78,6 +79,7 @@ public sealed class PanelPreview3D : MonoBehaviour
     [SerializeField] private Vector3 centerRotation = Vector3.zero;
     [SerializeField] private Vector3 placementRotation = Vector3.zero;
     [SerializeField] private Vector3 centerPreviewOffset = Vector3.zero;
+    [SerializeField] private float centerPreviewYOffset = 0f;
 
     [Header("Footprint Align")]
     [SerializeField] private bool autoScaleToFootprint = true;
@@ -417,8 +419,11 @@ public sealed class PanelPreview3D : MonoBehaviour
     private void ApplyCenterPreviewOffset(Transform t)
     {
         if (t == null) return;
-        if (centerPreviewOffset == Vector3.zero) return;
-        t.localPosition += centerPreviewOffset;
+        Vector3 offset = centerPreviewOffset;
+        if (!Mathf.Approximately(centerPreviewYOffset, 0f))
+            offset += Vector3.up * centerPreviewYOffset;
+        if (offset == Vector3.zero) return;
+        t.localPosition += offset;
     }
 
     private Vector3 CellToWorld(Vector2Int cell)
@@ -564,21 +569,37 @@ public sealed class PanelPreview3D : MonoBehaviour
         if (b.size.x <= 0.0001f || b.size.z <= 0.0001f) return;
 
         Transform scaleTarget = go.transform;
+        bool scaleFootprint = false;
         if (scaleFootprintNode && TryGetFootprintNode(go.transform, out Transform node))
+        {
             scaleTarget = node;
+            scaleFootprint = true;
+        }
 
         if (!_baseScales.TryGetValue(scaleTarget, out Vector3 baseScale))
-            baseScale = go.transform.localScale;
+            baseScale = scaleTarget.localScale;
 
         float targetX = footprint.x * cellWorldWidth;
         float targetZ = footprint.y * cellWorldHeight;
-        float scale = Mathf.Min(targetX / b.size.x, targetZ / b.size.z);
 
-        float finalScale = scale * Mathf.Max(0.01f, previewScale);
-        Vector3 scaled = baseScale * finalScale;
-        if (scaleTarget == go.transform && !Mathf.Approximately(previewHeightScale, 1f))
-            scaled.y *= previewHeightScale;
-        scaleTarget.localScale = scaled;
+        if (scaleFootprint)
+        {
+            // Non-uniform scale keeps rectangular cell aspect aligned to the grid.
+            float sx = targetX / b.size.x;
+            float sz = targetZ / b.size.z;
+            Vector3 scaled = new Vector3(baseScale.x * sx, baseScale.y, baseScale.z * sz);
+            scaled *= Mathf.Max(0.01f, previewScale);
+            scaleTarget.localScale = scaled;
+        }
+        else
+        {
+            float scale = Mathf.Min(targetX / b.size.x, targetZ / b.size.z);
+            float finalScale = scale * Mathf.Max(0.01f, previewScale);
+            Vector3 scaled = baseScale * finalScale;
+            if (scaleTarget == go.transform && !Mathf.Approximately(previewHeightScale, 1f))
+                scaled.y *= previewHeightScale;
+            scaleTarget.localScale = scaled;
+        }
 
         if (scaleTarget != go.transform && !Mathf.Approximately(previewHeightScale, 1f))
         {
@@ -678,11 +699,26 @@ public sealed class PanelPreview3D : MonoBehaviour
         if (!useFootprintNodeForBounds || root == null) return false;
         if (string.IsNullOrWhiteSpace(footprintNodeName)) return false;
 
+        if (TryFindNodeByName(root, footprintNodeName, out node))
+            return true;
+
+        if (!string.Equals(footprintNodeName, "BasePlate", System.StringComparison.OrdinalIgnoreCase)
+            && TryFindNodeByName(root, "BasePlate", out node))
+            return true;
+
+        return false;
+    }
+
+    private static bool TryFindNodeByName(Transform root, string name, out Transform node)
+    {
+        node = null;
+        if (root == null || string.IsNullOrWhiteSpace(name)) return false;
+
         var list = root.GetComponentsInChildren<Transform>(true);
         for (int i = 0; i < list.Length; i++)
         {
             var t = list[i];
-            if (t != null && t.name == footprintNodeName)
+            if (t != null && t.name == name)
             {
                 node = t;
                 return true;
@@ -784,6 +820,7 @@ public sealed class PanelPreview3D : MonoBehaviour
         previewCamera.backgroundColor = transparentBackground
             ? new Color(0f, 0f, 0f, 0f)
             : previewBackgroundColor;
+        ApplyPreviewLayerExclusion();
 
         if (autoSetupCamera && previewRoot != null)
         {
@@ -1012,6 +1049,16 @@ public sealed class PanelPreview3D : MonoBehaviour
             go.transform.SetParent(transform, false);
             previewRoot = go.transform;
         }
+    }
+
+    private void ApplyPreviewLayerExclusion()
+    {
+        if (!excludePreviewLayerFromMainCamera) return;
+        if (previewLayer.value == 0) return;
+
+        Camera cam = Camera.main;
+        if (cam == null || cam == previewCamera) return;
+        cam.cullingMask &= ~previewLayer.value;
     }
 
     private void OnDestroy()

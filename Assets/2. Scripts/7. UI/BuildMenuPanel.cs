@@ -13,6 +13,7 @@ public sealed class BuildMenuPanel : MonoBehaviour
     [SerializeField] private CanvasGroup dimGroup;
     [SerializeField] private CanvasGroup panelGroup;
     [SerializeField] private float fadeDuration = 0.18f;
+    [SerializeField] private bool forcePanelVisibleOnOpen = false;
 
     [Header("Grid View")]
     [SerializeField] private PanelGridView gridView;
@@ -269,7 +270,7 @@ public sealed class BuildMenuPanel : MonoBehaviour
             root.SetActive(true);
             if (panelGroup != null)
             {
-                panelGroup.alpha = 0f;
+                panelGroup.alpha = forcePanelVisibleOnOpen ? 1f : 0f;
                 panelGroup.interactable = true;
                 panelGroup.blocksRaycasts = true;
             }
@@ -282,7 +283,7 @@ public sealed class BuildMenuPanel : MonoBehaviour
             _panelFade?.Kill();
             _dimFade?.Kill();
 
-            if (panelGroup != null)
+            if (panelGroup != null && !forcePanelVisibleOnOpen)
                 _panelFade = panelGroup.DOFade(1f, fadeDuration).SetUpdate(true);
             if (dimGroup != null)
                 _dimFade = dimGroup.DOFade(1f, fadeDuration).SetUpdate(true);

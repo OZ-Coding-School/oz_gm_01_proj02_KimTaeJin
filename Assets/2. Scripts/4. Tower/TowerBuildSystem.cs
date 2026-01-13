@@ -7,6 +7,7 @@ public sealed class TowerBuildSystem : MonoBehaviour
     [SerializeField] private float dropHeight = 1.8f;
     [SerializeField] private float dropDuration = 0.22f;
     private readonly System.Collections.Generic.List<Vector2Int> _cells = new();
+    private readonly System.Collections.Generic.Dictionary<TowerDefinitionSO, bool> _hasBasePlate = new();
 
     public void Construct(RunScope scope) => _scope = scope;
 
@@ -105,8 +106,10 @@ public sealed class TowerBuildSystem : MonoBehaviour
         Vector3 offset = GetFootprintOffset(_scope.Grid, size, pivot);
         center += offset;
 
+        bool hasBasePlate = HasBasePlate(def);
+
         float groundY = center.y;
-        if (GameRoot.Instance != null)
+        if (!hasBasePlate && GameRoot.Instance != null)
         {
             float rayH = GameRoot.Instance.GroundRayHeight;
             var origin = new Vector3(center.x, rayH, center.z);
@@ -119,11 +122,16 @@ public sealed class TowerBuildSystem : MonoBehaviour
         }
 
         float extra = (GameRoot.Instance != null) ? GameRoot.Instance.GroundExtraOffset : 0.02f;
+        if (hasBasePlate)
+            extra = 0f;
 
         float bottomOffset = 0.0f;
-        var prefabCol = def.prefab.GetComponentInChildren<Collider>(true);
-        if (prefabCol != null)
-            bottomOffset = GetColliderBottomOffset(prefabCol, def.prefab.transform);
+        if (!hasBasePlate)
+        {
+            var prefabCol = def.prefab.GetComponentInChildren<Collider>(true);
+            if (prefabCol != null)
+                bottomOffset = GetColliderBottomOffset(prefabCol, def.prefab.transform);
+        }
 
         pos = new Vector3(center.x, groundY + bottomOffset + extra, center.z);
         return true;
@@ -209,10 +217,43 @@ public sealed class TowerBuildSystem : MonoBehaviour
         }
     }
 
+    private bool HasBasePlate(TowerDefinitionSO def)
+    {
+        if (def == null || def.prefab == null) return false;
+        if (_hasBasePlate.TryGetValue(def, out bool has))
+            return has;
+
+        has = def.prefab.GetComponentInChildren<FootprintVisualBaker>(true) != null;
+        if (!has)
+        {
+            var list = def.prefab.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < list.Length; i++)
+            {
+                var t = list[i];
+                if (t != null && t.name == "BasePlate")
+                {
+                    has = true;
+                    break;
+                }
+            }
+        }
+
+        _hasBasePlate[def] = has;
+        return has;
+    }
+
     private void PlayDropTween(Transform t, Vector3 targetPos)
     {
         if (t == null) return;
         if (dropHeight <= 0f || dropDuration <= 0f) return;
+
+        if (t.parent != null)
+        {
+            Vector3 localTarget = t.localPosition;
+            t.localPosition = localTarget + Vector3.up * dropHeight;
+            t.DOLocalMove(localTarget, dropDuration).SetEase(Ease.OutQuad);
+            return;
+        }
 
         t.position = targetPos + Vector3.up * dropHeight;
         t.DOMove(targetPos, dropDuration).SetEase(Ease.OutQuad);
