@@ -8,6 +8,7 @@ public sealed class TowerEntity : MonoBehaviour
 
     [Header("Pivot (optional)")]
     [SerializeField] private Transform yawPivot;
+    [SerializeField] private Transform pitchPivot;
     [SerializeField] private Transform muzzle;
 
     private RunScope _scope;
@@ -15,6 +16,9 @@ public sealed class TowerEntity : MonoBehaviour
     private float _cool;
     private bool _constructed;
     private Vector2Int[] _occupiedCells;
+    private bool _pivotsResolved;
+    private bool _pitchBaseCached;
+    private Quaternion _pitchBaseLocalRot = Quaternion.identity;
 
     public Vector2Int Cell { get; private set; }
     public Vector2Int OffsetFromCenter { get; private set; }
@@ -46,6 +50,11 @@ public sealed class TowerEntity : MonoBehaviour
         _constructed = true;
     }
 
+    private void Awake()
+    {
+        ResolvePivots();
+    }
+
     private void Update()
     {
         if (!_constructed || _scope == null || _def == null) return;
@@ -62,13 +71,25 @@ public sealed class TowerEntity : MonoBehaviour
 
         if (rotateToTarget)
         {
-            Vector3 to = target.transform.position - transform.position;
-            to.y = 0f;
+            ResolvePivots();
+            Transform yawT = (yawPivot != null) ? yawPivot : transform;
+            Vector3 to = target.transform.position - yawT.position;
+            Vector3 toYaw = to;
+            toYaw.y = 0f;
 
-            if (to.sqrMagnitude > 0.0001f)
+            if (toYaw.sqrMagnitude > 0.0001f)
             {
-                Transform rotT = (yawPivot != null) ? yawPivot : transform;
-                rotT.rotation = Quaternion.LookRotation(to.normalized, Vector3.up);
+                yawT.rotation = Quaternion.LookRotation(toYaw.normalized, Vector3.up);
+            }
+
+            if (pitchPivot != null)
+            {
+                Vector3 toPitch = target.transform.position - pitchPivot.position;
+                Vector3 local = yawT.InverseTransformDirection(toPitch);
+                float forward = new Vector2(local.x, local.z).magnitude;
+                if (forward < 0.0001f) forward = 0.0001f;
+                float pitch = Mathf.Atan2(local.y, forward) * Mathf.Rad2Deg;
+                pitchPivot.localRotation = _pitchBaseLocalRot * Quaternion.Euler(-pitch, 0f, 0f);
             }
         }
 
@@ -110,14 +131,16 @@ public sealed class TowerEntity : MonoBehaviour
     {
         if (_def.projectilePrefab != null && _scope?.App?.Pool != null)
         {
-            Transform rotT = (yawPivot != null) ? yawPivot : transform;
+            ResolvePivots();
+            Transform yawT = (yawPivot != null) ? yawPivot : transform;
+            Transform aimT = (pitchPivot != null) ? pitchPivot : yawT;
             Vector3 spawn = (muzzle != null)
                 ? muzzle.position
-                : (rotT.position + rotT.forward * 0.6f + Vector3.up * 0.2f);
+                : (aimT.position + aimT.forward * 0.6f + Vector3.up * 0.2f);
 
             Vector3 dir = target.transform.position - spawn;
-            dir.y = 0f;
-            if (dir.sqrMagnitude < 0.0001f) dir = rotT.forward;
+            if (pitchPivot == null) dir.y = 0f;
+            if (dir.sqrMagnitude < 0.0001f) dir = aimT.forward;
             dir.Normalize();
 
             Quaternion rot = Quaternion.LookRotation(dir, Vector3.up);
@@ -164,6 +187,26 @@ public sealed class TowerEntity : MonoBehaviour
                     }
                 }
             }
+        }
+    }
+
+    private void ResolvePivots()
+    {
+        if (_pivotsResolved) return;
+        _pivotsResolved = true;
+
+        Transform baseT = (yawPivot != null) ? yawPivot : transform;
+        if (pitchPivot == null)
+        {
+            pitchPivot = baseT.Find("PitchPivot");
+            if (pitchPivot == null)
+                pitchPivot = baseT.Find("Pitch");
+        }
+
+        if (pitchPivot != null && !_pitchBaseCached)
+        {
+            _pitchBaseLocalRot = pitchPivot.localRotation;
+            _pitchBaseCached = true;
         }
     }
 }
