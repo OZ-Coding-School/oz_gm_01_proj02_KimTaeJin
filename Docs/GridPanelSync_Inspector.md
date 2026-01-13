@@ -8,7 +8,7 @@
 - Auto Build Cell Size: Off
 - Build Anchor: MainCastle/GridAnchor
 - Build Width/Height: 9 / 10
-- Build Anchor Offset: (0, 0, -0.8235294) (Height가 짝수일 때 Z 반칸 보정)
+- Build Anchor Offset: (0, 0, 0.8235294) (Height가 짝수일 때 Z 반칸 보정)
 - Build Center: On
 
 ## RunScope / GridSystem (Scene: RunScope)
@@ -18,7 +18,7 @@
   - Width/Height: 9 / 10
   - Anchor: MainCastle/GridAnchor
   - Center On Anchor: On
-  - Anchor Offset: (0, 0, -0.8235294)
+  - Anchor Offset: (0, 0, 0.8235294)
 
 ## BaseFootprintReserver (Scene: RunScope)
 - Use Fixed Footprint: On
@@ -31,10 +31,16 @@
 - FootprintVisualBaker
   - Mask: MainCastle Mask
   - Use Grid Cell Size: On
+  - Cell Size: 2 (Grid 미지정 시)
+  - Cell Size Z Scale: 0.8235294 (Grid 미지정 시)
   - Auto Place Grid Anchor: On
   - Create Grid Anchor If Missing: On
   - BaseTilePrefab: TileReal
   - Normalize Anchor To Cell: On (Wall X 간격 보정)
+  - Center Footprint On Root: On
+  - AnchorVisual (Gate)
+    - Center To Cell: On
+    - Rotate Offset: On
 - GridAnchor 위치는 Baker가 자동 중앙 배치
 
 ## BuildMenuPanel / GridRoot
@@ -47,11 +53,13 @@
 
 ## PanelPreview3D
 - Use Grid Cell Size: On
+  - Grid 미지정 시 Cell Size + Cell Size Z Scale을 사용
 - Use Grid View Cell Aspect: On
 - Use Grid Root Rect For Aspect: Off
 - Use Detached Preview Root: On
 - Auto Fit RawImage To Grid: On
 - Use Orthographic: On
+- Exclude Preview Layer From Main Camera: On
 - GridSystem: RunScope.Grid
 - Center Prefab: MainCastle
 - Center Footprint: 3 x 3
@@ -81,7 +89,9 @@
 ### 4) (선택) FootprintVisualBaker로 TileReal 생성
 - Mask: Tower용 FootprintMaskSO (필수)
 - BaseTilePrefab: TileReal
+- Center Footprint On Root: On (타워는 루트 기준 중앙 정렬)
 - Normalize Tile To Cell: On
+- Build Bounds Tiles: On (PanelPreview3D 정렬 기준)
 - Center Tile To Cell: On
 - Tile Scale Multiplier: 1
 - Build Bounds Tiles: On (Footprint Node Name이 BasePlateBounds일 때 필요)
@@ -93,3 +103,4 @@
 ## 메모
 - 배치 좌표는 base footprint 기준 앵커로 계산됨.
 - 비율 변경 시 MainCastle과 타워의 FootprintVisualBaker에서 Rebuild/Bake로 BasePlate/Anchor/Bounds를 갱신.
+- GridAnchor나 AnchorVisual 변경 후에도 반드시 Rebuild 필요.
