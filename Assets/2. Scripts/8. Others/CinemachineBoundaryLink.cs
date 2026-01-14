@@ -47,7 +47,13 @@ public sealed class CinemachineBoundaryLink : MonoBehaviour
     private void Sync()
     {
         if (confiner == null || boundary == null) return;
-        confiner.m_BoundingVolume = boundary.Collider;
+        var col = boundary.Collider;
+        if (col == null || !col.enabled)
+        {
+            confiner.m_BoundingVolume = null;
+            return;
+        }
+        confiner.m_BoundingVolume = col;
         confiner.m_ConfineMode = CinemachineConfiner.Mode.Confine3D;
         confiner.InvalidatePathCache();
     }

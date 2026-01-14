@@ -1,23 +1,27 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public sealed class PlayerController : MonoBehaviour
 {
     [Header("Move")]
     [SerializeField] private float _turnSpeed = 720f;
 
-    [Header("Boundary (optional)")]
-    [SerializeField] private PlayAreaBoundary boundary;
-    [SerializeField] private bool clampToBoundary = true;
-    [SerializeField] private float boundaryRadius = -1f;
+    [Header("Boundary (soft radius)")]
+    [SerializeField] private PlayAreaProgressController playArea;
+    [SerializeField] private bool clampToRadius = true;
+    [SerializeField] private float softPushSpeed = 6f;
+    [SerializeField] private bool cancelOutwardMove = true;
+    [FormerlySerializedAs("boundaryRadius")]
+    [SerializeField] private float playerRadiusOverride = -1f;
 
     private float _baseMoveSpeed;  
     private float _moveSpeedMul = 1f; 
 
     private Rigidbody _rb;
     private Animator _anim;
-    private bool _boundaryResolved;
-    private bool _boundaryRadiusResolved;
-    private float _cachedBoundaryRadius;
+    private bool _playAreaResolved;
+    private bool _playerRadiusResolved;
+    private float _cachedPlayerRadius;
 
     private static readonly int MoveSpeedHash = Animator.StringToHash("MoveSpeed");
     public float CurrentMoveSpeed => _baseMoveSpeed * _moveSpeedMul;
@@ -40,8 +44,8 @@ public sealed class PlayerController : MonoBehaviour
             _rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
         }
 
-        ResolveBoundary();
-        CacheBoundaryRadius();
+        ResolvePlayArea();
+        CachePlayerRadius();
     }
 
     private void FixedUpdate()
@@ -58,15 +62,15 @@ public sealed class PlayerController : MonoBehaviour
         {
             Vector3 next = _rb.position + delta;
             next.y = _rb.position.y;
-            if (clampToBoundary && ResolveBoundary())
-                next = boundary.ClampInsideXZ(next, _cachedBoundaryRadius);
+            if (clampToRadius && ResolvePlayArea())
+                next = ApplySoftRadiusClamp(_rb.position, next);
             _rb.MovePosition(next);
         }
         else
         {
             Vector3 next = transform.position + delta;
-            if (clampToBoundary && ResolveBoundary())
-                next = boundary.ClampInsideXZ(next, _cachedBoundaryRadius);
+            if (clampToRadius && ResolvePlayArea())
+                next = ApplySoftRadiusClamp(transform.position, next);
             transform.position = next;
         }
 
@@ -92,21 +96,21 @@ public sealed class PlayerController : MonoBehaviour
         }
     }
 
-    private bool ResolveBoundary()
+    private bool ResolvePlayArea()
     {
-        if (boundary != null) return true;
-        if (_boundaryResolved) return false;
-        _boundaryResolved = true;
-        boundary = FindObjectOfType<PlayAreaBoundary>();
-        return boundary != null;
+        if (playArea != null) return true;
+        if (_playAreaResolved) return false;
+        _playAreaResolved = true;
+        playArea = FindObjectOfType<PlayAreaProgressController>();
+        return playArea != null;
     }
 
-    private void CacheBoundaryRadius()
+    private void CachePlayerRadius()
     {
-        if (_boundaryRadiusResolved) return;
-        _boundaryRadiusResolved = true;
+        if (_playerRadiusResolved) return;
+        _playerRadiusResolved = true;
 
-        float radius = boundaryRadius;
+        float radius = playerRadiusOverride;
         if (radius <= 0f)
         {
             radius = 0.35f;
@@ -127,7 +131,37 @@ public sealed class PlayerController : MonoBehaviour
             }
         }
 
-        _cachedBoundaryRadius = Mathf.Max(0f, radius);
+        _cachedPlayerRadius = Mathf.Max(0f, radius);
+    }
+
+    private Vector3 ApplySoftRadiusClamp(Vector3 current, Vector3 desired)
+    {
+        float padding = _cachedPlayerRadius;
+        if (playArea.IsInsideXZ(desired, padding))
+            return desired;
+
+        Vector3 clamped = playArea.ClampPointXZ(desired, padding);
+        Vector3 outVec = desired - clamped;
+        outVec.y = 0f;
+        float outMag = outVec.magnitude;
+        if (outMag <= 0.0001f)
+            return desired;
+
+        Vector3 dir = outVec / outMag;
+
+        if (cancelOutwardMove)
+        {
+            Vector3 delta = desired - current;
+            delta.y = 0f;
+            float outward = Vector3.Dot(delta, dir);
+            if (outward > 0f)
+                desired -= dir * outward;
+        }
+
+        float push = Mathf.Min(outMag, Mathf.Max(0.01f, softPushSpeed) * Time.fixedDeltaTime);
+        desired -= dir * push;
+        desired.y = current.y;
+        return desired;
     }
 
 }

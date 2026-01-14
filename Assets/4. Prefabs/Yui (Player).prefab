@@ -393,6 +393,14 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 403605467610091721}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 66a16ba60163fcd49a0d1dbcdf04bfc2,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -2488335617046639423}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 66a16ba60163fcd49a0d1dbcdf04bfc2,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5374172575195753286}
   m_SourcePrefab: {fileID: 100100000, guid: 66a16ba60163fcd49a0d1dbcdf04bfc2, type: 3}
 --- !u!4 &7003956829500086952 stripped
 Transform:
@@ -481,6 +489,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _turnSpeed: 720
+  boundary: {fileID: 0}
+  clampToBoundary: 1
+  boundaryRadius: -1
 --- !u!114 &2325586462301668326
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -568,3 +579,32 @@ MonoBehaviour:
   harvestVfxPrefab: {fileID: 5484218944294176571, guid: 9cb35763d5968614684df764f22039a5,
     type: 3}
   vfxLifeTime: 1
+--- !u!114 &-2488335617046639423
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7672125009476075538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3cebafed5ee888d4bb57ae34b42e0108, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  boundary: {fileID: 0}
+  damagePerSecond: 100
+  tickInterval: 0.2
+--- !u!114 &5374172575195753286
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7672125009476075538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: afae46bfc80690b4db2c90b6a877e33e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxHp: 100
+  resetOnEnable: 1

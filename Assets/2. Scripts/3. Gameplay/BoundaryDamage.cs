@@ -1,16 +1,19 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
 public sealed class BoundaryDamage : MonoBehaviour
 {
-    [SerializeField] private PlayAreaBoundary boundary;
+    [SerializeField] private PlayAreaProgressController playArea;
+    [FormerlySerializedAs("radiusOverride")]
+    [SerializeField] private float radiusPadding = 0f;
     [SerializeField] private int damagePerSecond = 50;
     [SerializeField] private float tickInterval = 0.2f;
 
     private HealthComponent _hp;
     private float _tick;
     private bool _warnedNoHp;
-    private bool _boundaryResolved;
+    private bool _playAreaResolved;
 
     private void Awake()
     {
@@ -18,12 +21,12 @@ public sealed class BoundaryDamage : MonoBehaviour
         if (_hp == null)
             _hp = GetComponentInChildren<HealthComponent>();
 
-        ResolveBoundary();
+        ResolvePlayArea();
     }
 
     private void Update()
     {
-        if (!ResolveBoundary()) return;
+        if (!ResolvePlayArea()) return;
         if (damagePerSecond <= 0 || tickInterval <= 0f) return;
 
         if (_hp == null)
@@ -36,7 +39,7 @@ public sealed class BoundaryDamage : MonoBehaviour
             return;
         }
 
-        if (boundary.IsInsideXZ(transform.position))
+        if (playArea.IsInsideXZ(transform.position, radiusPadding))
         {
             _tick = 0f;
             return;
@@ -50,12 +53,12 @@ public sealed class BoundaryDamage : MonoBehaviour
         _hp.ApplyDamage(damage);
     }
 
-    private bool ResolveBoundary()
+    private bool ResolvePlayArea()
     {
-        if (boundary != null) return true;
-        if (_boundaryResolved) return false;
-        _boundaryResolved = true;
-        boundary = FindObjectOfType<PlayAreaBoundary>();
-        return boundary != null;
+        if (playArea != null) return true;
+        if (_playAreaResolved) return false;
+        _playAreaResolved = true;
+        playArea = FindObjectOfType<PlayAreaProgressController>();
+        return playArea != null;
     }
 }

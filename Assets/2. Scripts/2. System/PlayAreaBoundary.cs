@@ -13,9 +13,13 @@ public sealed class PlayAreaBoundary : MonoBehaviour
     [SerializeField] private float topY = 6f;
 
     [Header("Collider (auto)")]
-    [SerializeField] private bool autoCreateCollider = true;
-    [SerializeField] private bool colliderIsTrigger = true;
+    [SerializeField] private bool autoCreateCollider = false;
+    [SerializeField] private bool colliderIsTrigger = false;
+    [SerializeField] private bool forceConvexCollider = true;
     [SerializeField] private MeshCollider meshCollider;
+
+    [Header("Fog Globals (optional)")]
+    [SerializeField] private bool updateShaderGlobals = true;
 
     [Header("Rebuild")]
     [SerializeField] private bool rebuildOnEnable = true;
@@ -24,6 +28,11 @@ public sealed class PlayAreaBoundary : MonoBehaviour
     private Mesh _mesh;
     private bool _isCCW;
     private Vector2[] _edgeNormals;
+    private static readonly int BoundaryCountPid = Shader.PropertyToID("_BoundaryCount");
+    private static readonly int BoundaryPointsPid = Shader.PropertyToID("_BoundaryPoints");
+    private static readonly int BoundaryWorldToLocalPid = Shader.PropertyToID("_BoundaryWorldToLocal");
+    private const int MaxPoints = 32;
+    private static readonly Vector4[] _pointsBuffer = new Vector4[MaxPoints];
 
     public event Action BoundaryChanged;
 
@@ -55,6 +64,12 @@ public sealed class PlayAreaBoundary : MonoBehaviour
             Rebuild();
     }
 
+    private void LateUpdate()
+    {
+        if (updateShaderGlobals)
+            UpdateShaderGlobals();
+    }
+
 #if UNITY_EDITOR
     private void OnValidate()
     {
@@ -81,11 +96,15 @@ public sealed class PlayAreaBoundary : MonoBehaviour
         {
             ApplyMesh(null);
             BoundaryChanged?.Invoke();
+            if (updateShaderGlobals)
+                UpdateShaderGlobals();
             return;
         }
 
         ApplyMesh(_mesh);
         BoundaryChanged?.Invoke();
+        if (updateShaderGlobals)
+            UpdateShaderGlobals();
     }
 
     public bool IsInsideXZ(Vector3 worldPos)
@@ -115,6 +134,16 @@ public sealed class PlayAreaBoundary : MonoBehaviour
 
     private void EnsureCollider()
     {
+        if (!autoCreateCollider)
+        {
+            if (meshCollider != null)
+            {
+                meshCollider.sharedMesh = null;
+                meshCollider.enabled = false;
+            }
+            return;
+        }
+
         if (meshCollider == null && autoCreateCollider)
             meshCollider = GetComponent<MeshCollider>();
 
@@ -122,7 +151,12 @@ public sealed class PlayAreaBoundary : MonoBehaviour
             meshCollider = gameObject.AddComponent<MeshCollider>();
 
         if (meshCollider != null)
+        {
+            meshCollider.convex = forceConvexCollider;
+            if (!meshCollider.convex && colliderIsTrigger)
+                colliderIsTrigger = false;
             meshCollider.isTrigger = colliderIsTrigger;
+        }
     }
 
     private void NormalizeHeights()
@@ -203,6 +237,7 @@ public sealed class PlayAreaBoundary : MonoBehaviour
         _mesh.Clear();
         _mesh.SetVertices(verts);
         _mesh.SetTriangles(tris, 0);
+        _mesh.RecalculateNormals();
         _mesh.RecalculateBounds();
         return true;
     }
@@ -410,5 +445,25 @@ public sealed class PlayAreaBoundary : MonoBehaviour
             Vector3 wb = transform.TransformPoint(new Vector3(b.x, 0f, b.y));
             Gizmos.DrawLine(wa, wb);
         }
+    }
+
+    private void UpdateShaderGlobals()
+    {
+        if (points == null || points.Count < 3)
+        {
+            Shader.SetGlobalInt(BoundaryCountPid, 0);
+            return;
+        }
+
+        int count = Mathf.Min(points.Count, MaxPoints);
+        for (int i = 0; i < count; i++)
+        {
+            Vector2 p = points[i];
+            _pointsBuffer[i] = new Vector4(p.x, p.y, 0f, 0f);
+        }
+
+        Shader.SetGlobalInt(BoundaryCountPid, count);
+        Shader.SetGlobalVectorArray(BoundaryPointsPid, _pointsBuffer);
+        Shader.SetGlobalMatrix(BoundaryWorldToLocalPid, transform.worldToLocalMatrix);
     }
 }
