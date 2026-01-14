@@ -10,6 +10,7 @@ public sealed class TowerEntity : MonoBehaviour
     [SerializeField] private Transform yawPivot;
     [SerializeField] private Transform pitchPivot;
     [SerializeField] private Transform muzzle;
+    [SerializeField] private bool invertPitch = false;
 
     private RunScope _scope;
     private TowerDefinitionSO _def;
@@ -89,7 +90,8 @@ public sealed class TowerEntity : MonoBehaviour
                 float forward = new Vector2(local.x, local.z).magnitude;
                 if (forward < 0.0001f) forward = 0.0001f;
                 float pitch = Mathf.Atan2(local.y, forward) * Mathf.Rad2Deg;
-                pitchPivot.localRotation = _pitchBaseLocalRot * Quaternion.Euler(-pitch, 0f, 0f);
+                float signedPitch = invertPitch ? pitch : -pitch;
+                pitchPivot.localRotation = _pitchBaseLocalRot * Quaternion.Euler(signedPitch, 0f, 0f);
             }
         }
 
