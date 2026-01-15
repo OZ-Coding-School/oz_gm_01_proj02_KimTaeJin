@@ -60,6 +60,9 @@ public sealed class BuildMenuPanel : MonoBehaviour
     private Tween _dimFade;
     private bool[,] _buildableMask;
     private bool[,] _occupiedMask;
+    private readonly HashSet<Vector2Int> _roadCells = new();
+
+    public bool IsOpen => root != null && root.activeInHierarchy;
 
     private void Awake()
     {
@@ -160,12 +163,17 @@ public sealed class BuildMenuPanel : MonoBehaviour
                 bool placed = _scope.TowerBuild.TryPlaceTowerOffset(_placingDef, offset, Quaternion.identity);
                 if (placed)
                 {
+                    TowerEntity placedTower = FindPlacedTower(_placingDef, offset, cell);
                     _pendingClose = true;
                     if (preview3D != null)
                     {
                         preview3D.SetPlacementTint(canPlaceColor);
-                        preview3D.SetPlacementActive(false);
-                        preview3D.SyncPlacedTowers(_scope.Entities != null ? _scope.Entities.Towers : null);
+                        FootprintMaskUtility.GetFootprintData(_placingDef, out _, out Vector2Int size, out Vector2Int pivot);
+                        if (!preview3D.TryCommitPlacementPreview(placedTower, cell, size, pivot))
+                        {
+                            preview3D.SetPlacementActive(false);
+                            preview3D.ClearPlacementPreview();
+                        }
                         RefreshGridTiles();
                     }
                     StartCloseDelay();
@@ -241,7 +249,10 @@ public sealed class BuildMenuPanel : MonoBehaviour
         ShowPanel(false);
         UnbindEconomy();
         if (preview3D != null)
+        {
+            preview3D.ClearRoadTiles();
             preview3D.ClearPlacedTowers();
+        }
     }
 
     public void ExitBuildMode()
@@ -444,6 +455,25 @@ public sealed class BuildMenuPanel : MonoBehaviour
         return cell - GetCenterCell();
     }
 
+    private TowerEntity FindPlacedTower(TowerDefinitionSO def, Vector2Int offset, Vector2Int cell)
+    {
+        if (def == null || _scope?.Entities == null) return null;
+        var list = _scope.Entities.Towers;
+        if (list == null || list.Count == 0) return null;
+
+        for (int i = list.Count - 1; i >= 0; i--)
+        {
+            var t = list[i];
+            if (t == null) continue;
+            if (t.Definition != def) continue;
+            if (t.OffsetFromCenter != offset) continue;
+            if (t.Cell != cell) continue;
+            return t;
+        }
+
+        return null;
+    }
+
     private void UpdatePlacementPreview(Vector2Int cell)
     {
         if (!_hasPlacementCell)
@@ -532,6 +562,27 @@ public sealed class BuildMenuPanel : MonoBehaviour
 
         BuildGridRules.ComputeBuildable(_scope.Grid, _buildableMask, _occupiedMask);
         preview3D.SetTileStates(_buildableMask, _occupiedMask);
+        RefreshRoadTiles();
+    }
+
+    private void RefreshRoadTiles()
+    {
+        if (preview3D == null) return;
+        if (_scope == null || _scope.Grid == null)
+        {
+            preview3D.ClearRoadTiles();
+            return;
+        }
+
+        _roadCells.Clear();
+        GridRoadUtility.BuildRoadCells(
+            _scope.Grid,
+            GetCenterCell(),
+            _scope.BaseFootprintReserver,
+            _scope.Entities != null ? _scope.Entities.Towers : null,
+            _roadCells);
+
+        preview3D.SetRoadCells(_roadCells);
     }
 
     private bool EnsureGridMasks(int w, int h)
@@ -552,7 +603,10 @@ public sealed class BuildMenuPanel : MonoBehaviour
         StopCloseDelay();
 
         if (preview3D != null)
+        {
             preview3D.SetPlacementActive(false);
+            preview3D.ClearPlacementPreview();
+        }
 
         RestoreButtonsAfterPlacement();
     }

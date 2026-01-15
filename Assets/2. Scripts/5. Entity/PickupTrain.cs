@@ -159,6 +159,9 @@ public sealed class PickupTrain : MonoBehaviour
         if (building == null) return;
 
         _depositing = true;
+        var receiver = building.GetComponentInParent<ResourceDepositReceiver>();
+        if (receiver != null)
+            receiver.Deposit(_items);
 
         Vector3 baseTarget = building.position + Vector3.up * 1.0f;
 

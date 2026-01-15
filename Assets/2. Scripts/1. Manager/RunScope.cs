@@ -9,6 +9,7 @@ public sealed class RunScope : MonoBehaviour
     public CombatSystem Combat { get; private set; }
 
     public RunEconomy Economy { get; private set; }
+    public ResourceProgression Progression { get; private set; }
 
     public GridSystem Grid { get; private set; }
     public TowerBuildSystem TowerBuild { get; private set; }
@@ -17,6 +18,7 @@ public sealed class RunScope : MonoBehaviour
 
     public GameManager GameManager { get; private set; }
     public EnemySpawnSystem Spawner { get; private set; }
+    public float TowerAttackSpeedMultiplier => _towerAttackSpeedMultiplier;
 
     [Header("Required")]
     [SerializeField] private GridSystem grid;
@@ -28,10 +30,13 @@ public sealed class RunScope : MonoBehaviour
     [SerializeField] private BuildModePauseSystem buildModePause;
     [SerializeField] private BaseFootprintReserver baseFootprintReserver;
     [SerializeField] private BaseFootprintOverlay baseFootprintOverlay;
+    [SerializeField] private ResourceProgression progression;
+    [SerializeField] private BuildMenuLevelUpOpener buildMenuLevelUpOpener;
     [SerializeField] private PlacementSystem placement;
     [SerializeField] private EnemySpawnSystem spawner;
 
     private bool _initialized;
+    private float _towerAttackSpeedMultiplier = 1f;
 
     public void Initialize(AppServicesRoot app)
     {
@@ -59,6 +64,8 @@ public sealed class RunScope : MonoBehaviour
         buildModePause = buildModePause != null ? buildModePause : GetComponent<BuildModePauseSystem>();
         baseFootprintReserver = baseFootprintReserver != null ? baseFootprintReserver : GetComponent<BaseFootprintReserver>();
         baseFootprintOverlay = baseFootprintOverlay != null ? baseFootprintOverlay : GetComponent<BaseFootprintOverlay>();
+        progression = progression != null ? progression : GetComponent<ResourceProgression>();
+        buildMenuLevelUpOpener = buildMenuLevelUpOpener != null ? buildMenuLevelUpOpener : GetComponent<BuildMenuLevelUpOpener>();
         placement = placement != null ? placement : GetComponent<PlacementSystem>();
         spawner = spawner != null ? spawner : GetComponent<EnemySpawnSystem>();
 
@@ -67,6 +74,12 @@ public sealed class RunScope : MonoBehaviour
         Placement = placement;
         BaseFootprintReserver = baseFootprintReserver;
         Spawner = spawner;
+
+        if (progression == null)
+            progression = gameObject.AddComponent<ResourceProgression>();
+        Progression = progression;
+        if (buildMenuLevelUpOpener == null)
+            buildMenuLevelUpOpener = gameObject.AddComponent<BuildMenuLevelUpOpener>();
 
         if (grid != null && GameRoot.Instance != null)
         {
@@ -82,6 +95,7 @@ public sealed class RunScope : MonoBehaviour
         }
 
         Grid?.ClearAll();
+        EnsureGridRoadSystem();
 
         buildMode?.Construct(this);
         buildModePause?.Construct(this);
@@ -90,6 +104,7 @@ public sealed class RunScope : MonoBehaviour
         baseFootprintOverlay?.Construct(this);
         towerBuild?.Construct(this);
         placement?.Construct(this);
+        progression?.Construct(this);
 
         Entities = new EntityManager();
         Combat = new CombatSystem();
@@ -141,5 +156,17 @@ public sealed class RunScope : MonoBehaviour
         Economy?.Dispose();
         Events?.Dispose();
         Entities?.Dispose();
+    }
+
+    public void SetTowerAttackSpeedMultiplier(float multiplier)
+    {
+        _towerAttackSpeedMultiplier = Mathf.Max(0.01f, multiplier);
+    }
+
+    private void EnsureGridRoadSystem()
+    {
+        if (GetComponent<GridRoadSystem>() != null) return;
+        if (Object.FindObjectOfType<GridRoadSystem>(true) != null) return;
+        gameObject.AddComponent<GridRoadSystem>();
     }
 }

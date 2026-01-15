@@ -7,6 +7,7 @@ public sealed class TowerBuildSystem : MonoBehaviour
     [SerializeField] private float dropHeight = 1.8f;
     [SerializeField] private float dropDuration = 0.22f;
     private readonly System.Collections.Generic.List<Vector2Int> _cells = new();
+    private readonly System.Collections.Generic.List<Vector2Int> _upgradeCells = new();
     private readonly System.Collections.Generic.Dictionary<TowerDefinitionSO, bool> _hasBasePlate = new();
 
     public void Construct(RunScope scope) => _scope = scope;
@@ -33,6 +34,8 @@ public sealed class TowerBuildSystem : MonoBehaviour
     {
         if (_scope == null || def == null || def.prefab == null) return false;
         if (_scope.Grid == null) return false;
+        if (TryGetUpgradeableTower(def, cell, out TowerEntity existing))
+            return CanUpgradeAtCell(def, existing, cell, out _, out _);
         FootprintMaskUtility.GetFootprintData(def, out FootprintMaskSO mask, out Vector2Int size, out Vector2Int pivot);
         return BuildGridRules.CanPlaceFootprint(_scope.Grid, mask, size, pivot, cell);
     }
@@ -62,6 +65,13 @@ public sealed class TowerBuildSystem : MonoBehaviour
         }
 
         Vector2Int cell = GetAnchorCell() + offset;
+        if (TryGetUpgradeableTower(def, cell, out TowerEntity existing))
+        {
+            if (CanUpgradeAtCell(def, existing, cell, out _, out string upgradeReason))
+                return true;
+            reason = upgradeReason;
+            return false;
+        }
         FootprintMaskUtility.GetFootprintData(def, out FootprintMaskSO mask, out Vector2Int size, out Vector2Int pivot);
         FootprintMaskUtility.GetFootprintCells(mask, size, pivot, cell, _cells);
         for (int i = 0; i < _cells.Count; i++)
@@ -145,6 +155,14 @@ public sealed class TowerBuildSystem : MonoBehaviour
     public bool TryPlaceTower(TowerDefinitionSO def, Vector2Int cell, Quaternion rot, out TowerEntity towerEntity)
     {
         towerEntity = null;
+        if (_scope == null || _scope.Grid == null) return false;
+
+        if (TryGetUpgradeableTower(def, cell, out TowerEntity existing))
+        {
+            if (!CanUpgradeAtCell(def, existing, cell, out TowerDefinitionSO nextDef, out _)) return false;
+            return TryUpgradeTower(existing, nextDef, cell, rot, out towerEntity);
+        }
+
         if (!CanPlace(def, cell)) return false;
 
         if (!TryGetPlacementPos(def, cell, out Vector3 pos)) return false;
@@ -240,6 +258,180 @@ public sealed class TowerBuildSystem : MonoBehaviour
 
         _hasBasePlate[def] = has;
         return has;
+    }
+
+    private bool TryGetUpgradeableTower(TowerDefinitionSO def, Vector2Int cell, out TowerEntity tower)
+    {
+        tower = null;
+        if (_scope == null || _scope.Entities == null || def == null) return false;
+
+        var list = _scope.Entities.Towers;
+        if (list == null) return false;
+
+        for (int i = 0; i < list.Count; i++)
+        {
+            var t = list[i];
+            if (t == null) continue;
+            if (t.Cell != cell) continue;
+            if (t.Definition == null) continue;
+            if (!IsSameUpgradeChain(def, t.Definition)) continue;
+            tower = t;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool CanUpgradeAtCell(
+        TowerDefinitionSO def,
+        TowerEntity existing,
+        Vector2Int cell,
+        out TowerDefinitionSO nextDef,
+        out string reason)
+    {
+        reason = "";
+        nextDef = null;
+
+        if (_scope == null || _scope.Grid == null)
+        {
+            reason = "GridSystem is null";
+            return false;
+        }
+        if (def == null || existing == null)
+        {
+            reason = "TowerDefinitionSO is null";
+            return false;
+        }
+
+        TowerDefinitionSO currentDef = existing.Definition;
+        if (currentDef == null)
+        {
+            reason = "Existing tower definition is null";
+            return false;
+        }
+        if (!IsSameUpgradeChain(def, currentDef))
+        {
+            reason = "Not same upgrade chain";
+            return false;
+        }
+
+        nextDef = currentDef.upgradeNext;
+        if (nextDef == null)
+        {
+            reason = "UpgradeNext is null";
+            return false;
+        }
+        if (nextDef.prefab == null)
+        {
+            reason = "UpgradeNext.prefab is null";
+            return false;
+        }
+
+        _upgradeCells.Clear();
+        FootprintMaskUtility.GetFootprintData(currentDef, out FootprintMaskSO curMask, out Vector2Int curSize, out Vector2Int curPivot);
+        FootprintMaskUtility.GetFootprintCells(curMask, curSize, curPivot, cell, _upgradeCells);
+
+        _cells.Clear();
+        FootprintMaskUtility.GetFootprintData(nextDef, out FootprintMaskSO nextMask, out Vector2Int nextSize, out Vector2Int nextPivot);
+        FootprintMaskUtility.GetFootprintCells(nextMask, nextSize, nextPivot, cell, _cells);
+
+        for (int i = 0; i < _cells.Count; i++)
+        {
+            Vector2Int c = _cells[i];
+            if (!_scope.Grid.IsInBounds(c))
+            {
+                reason = $"Out of bounds cell={c}";
+                return false;
+            }
+            if (_scope.Grid.IsOccupied(c) && !ListContainsCell(_upgradeCells, c))
+            {
+                reason = $"Cell occupied cell={c}";
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsSameUpgradeChain(TowerDefinitionSO a, TowerDefinitionSO b)
+    {
+        if (a == null || b == null) return false;
+        if (IsUpgradeChainMatch(a, b)) return true;
+        return IsUpgradeChainMatch(b, a);
+    }
+
+    private static bool IsUpgradeChainMatch(TowerDefinitionSO root, TowerDefinitionSO target)
+    {
+        if (root == null || target == null) return false;
+        for (TowerDefinitionSO cur = root; cur != null; cur = cur.upgradeNext)
+        {
+            if (cur == target) return true;
+        }
+        return false;
+    }
+
+    private bool TryUpgradeTower(
+        TowerEntity existing,
+        TowerDefinitionSO nextDef,
+        Vector2Int cell,
+        Quaternion rot,
+        out TowerEntity towerEntity)
+    {
+        towerEntity = null;
+        if (_scope == null || nextDef == null || nextDef.prefab == null) return false;
+
+        Vector2Int offsetFromCenter = existing != null ? existing.OffsetFromCenter : Vector2Int.zero;
+        if (!TryGetPlacementPos(nextDef, cell, out Vector3 pos)) return false;
+
+        ReleaseTowerCells(existing);
+        if (existing != null)
+        {
+            _scope.Entities?.UnregisterTower(existing);
+            Object.Destroy(existing.gameObject);
+        }
+
+        Transform parent = (_scope.Grid != null) ? _scope.Grid.Anchor : null;
+        var tower = Object.Instantiate(nextDef.prefab, pos, rot);
+        if (parent != null)
+            tower.transform.SetParent(parent, true);
+
+        tower.name = $"{nextDef.id}_Tower";
+        tower.SetCell(cell);
+        tower.SetOffsetFromCenter(offsetFromCenter);
+        FootprintMaskUtility.GetFootprintData(nextDef, out FootprintMaskSO mask, out Vector2Int size, out Vector2Int pivot);
+        tower.SetFootprint(size);
+        tower.Construct(_scope, nextDef);
+
+        _scope.Entities.RegisterTower(tower);
+        FootprintMaskUtility.GetFootprintCells(mask, size, pivot, cell, _cells);
+        tower.SetOccupiedCells(_cells);
+        OccupyCells(_cells);
+
+        PlayDropTween(tower.transform, pos);
+
+        towerEntity = tower;
+        return true;
+    }
+
+    private void ReleaseTowerCells(TowerEntity tower)
+    {
+        if (_scope == null || _scope.Grid == null || tower == null) return;
+        TowerDefinitionSO def = tower.Definition;
+        if (def == null) return;
+
+        _upgradeCells.Clear();
+        FootprintMaskUtility.GetFootprintData(def, out FootprintMaskSO mask, out Vector2Int size, out Vector2Int pivot);
+        FootprintMaskUtility.GetFootprintCells(mask, size, pivot, tower.Cell, _upgradeCells);
+
+        for (int i = 0; i < _upgradeCells.Count; i++)
+            _scope.Grid.Release(_upgradeCells[i]);
+    }
+
+    private static bool ListContainsCell(System.Collections.Generic.List<Vector2Int> cells, Vector2Int cell)
+    {
+        for (int i = 0; i < cells.Count; i++)
+            if (cells[i] == cell) return true;
+        return false;
     }
 
     private void PlayDropTween(Transform t, Vector3 targetPos)

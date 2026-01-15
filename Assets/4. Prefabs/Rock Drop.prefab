@@ -129,6 +129,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   amount: 1
+  resourceType: 2
   popDuration: 0.2
   jumpDuration: 0.35
   jumpPower: 0.6

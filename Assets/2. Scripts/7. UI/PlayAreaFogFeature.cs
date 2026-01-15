@@ -43,6 +43,9 @@ public sealed class PlayAreaFogFeature : ScriptableRendererFeature
 
         if (renderingData.cameraData.isPreviewCamera)
             return;
+        var cam = renderingData.cameraData.camera;
+        if (cam != null && cam.GetComponent<PlayAreaFogIgnore>() != null)
+            return;
 
         renderer.EnqueuePass(_pass);
     }
@@ -52,6 +55,9 @@ public sealed class PlayAreaFogFeature : ScriptableRendererFeature
         if (settings == null || settings.material == null)
             return;
         if (renderingData.cameraData.isPreviewCamera)
+            return;
+        var cam = renderingData.cameraData.camera;
+        if (cam != null && cam.GetComponent<PlayAreaFogIgnore>() != null)
             return;
 
         _pass.ConfigureInput(ScriptableRenderPassInput.Color | ScriptableRenderPassInput.Depth);

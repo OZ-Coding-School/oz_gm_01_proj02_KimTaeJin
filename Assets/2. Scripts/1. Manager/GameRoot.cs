@@ -8,6 +8,7 @@ public sealed class GameRoot : MonoBehaviour
     private GameLoopStateMachine _loop;
     [SerializeField] private PlayerEntity playerPrefab;
     [SerializeField] private EnemyEntity enemyPrefab;
+    [SerializeField] private DropItem enemyExpDropPrefab;
 
     [Header("Build/Tower Catalog")]
     [SerializeField] private TowerDefinitionSO[] towerCatalog;
@@ -33,6 +34,7 @@ public sealed class GameRoot : MonoBehaviour
     public int StartGold => startGold;
     public float BuildCellSize => buildCellSize;
     public float BuildCellSizeZScale => buildCellSizeZScale;
+    public GameObject BuildCellSizePrefab => buildCellSizePrefab;
     public Vector3 BuildGridOrigin => buildGridOrigin;
     public Transform BuildAnchor => buildAnchor;
     public Vector3 BuildAnchorOffset => buildAnchorOffset;
@@ -46,6 +48,7 @@ public sealed class GameRoot : MonoBehaviour
 
     public PlayerEntity PlayerPrefab => playerPrefab;
     public EnemyEntity EnemyPrefab => enemyPrefab;
+    public DropItem EnemyExpDropPrefab => enemyExpDropPrefab;
     public float SpawnInterval => spawnInterval;
     public float SpawnRadius => spawnRadius;
 

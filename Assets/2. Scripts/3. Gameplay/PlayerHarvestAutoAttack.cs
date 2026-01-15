@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public sealed class PlayerHarvestAutoAttack : MonoBehaviour
@@ -23,6 +24,8 @@ public sealed class PlayerHarvestAutoAttack : MonoBehaviour
 
     private RunScope _scope;
     private float _cooldown;
+    private readonly List<Harvestable> _harvestHits = new();
+    private readonly HashSet<Harvestable> _harvestHitSet = new();
 
     public void Construct(RunScope scope)
     {
@@ -37,24 +40,34 @@ public sealed class PlayerHarvestAutoAttack : MonoBehaviour
         _cooldown -= Time.deltaTime;
         if (_cooldown > 0f) return;
 
-        var target = FindNearestHarvestable();
+        var target = CollectHarvestablesInRadius();
         if (target == null) return;
         FaceTarget(target.transform.position);
         if (animator != null) animator.SetTrigger(AttackHash);
         SpawnHarvestVfx();
-        target.TakeHit(harvestDamage, transform.position);
+        Vector3 p = transform.position;
+        for (int i = 0; i < _harvestHits.Count; i++)
+        {
+            var h = _harvestHits[i];
+            if (h == null) continue;
+            h.TakeHit(harvestDamage, p);
+        }
 
         _cooldown = (attacksPerSecond <= 0f) ? 0.2f : (1f / attacksPerSecond);
     }
 
-    private Harvestable FindNearestHarvestable()
+    private Harvestable CollectHarvestablesInRadius()
     {
+        _harvestHits.Clear();
+        _harvestHitSet.Clear();
+
         Vector3 p = transform.position;
         var cols = Physics.OverlapSphere(p, harvestRange, harvestMask, QueryTriggerInteraction.Ignore);
         if (cols == null || cols.Length == 0) return null;
 
         Harvestable best = null;
         float bestD2 = float.MaxValue;
+        float r2 = hitRadius * hitRadius;
 
         for (int i = 0; i < cols.Length; i++)
         {
@@ -63,9 +76,12 @@ public sealed class PlayerHarvestAutoAttack : MonoBehaviour
 
             Vector3 d = h.transform.position - p;
             d.y = 0f;
-            if (d.sqrMagnitude > hitRadius * hitRadius) continue;
-
             float d2 = d.sqrMagnitude;
+            if (d2 > r2) continue;
+
+            if (_harvestHitSet.Add(h))
+                _harvestHits.Add(h);
+
             if (d2 < bestD2)
             {
                 bestD2 = d2;

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -18,6 +19,7 @@ public sealed class FootprintVisualBaker : MonoBehaviour
     [SerializeField] private bool normalizeTileToCell = true;
     [SerializeField] private bool centerTileToCell = true;
     [SerializeField] private float tileScaleMultiplier = 1f;
+    [SerializeField] private bool useBaseTileBottomOffset = false;
 
     [Header("Grid Anchor (Auto Center)")]
     [SerializeField] private Transform gridAnchor;
@@ -44,6 +46,15 @@ public sealed class FootprintVisualBaker : MonoBehaviour
     [SerializeField] private bool normalizeAnchorToCell = false;
     [SerializeField] private float anchorScaleMultiplier = 1f;
 
+    [Header("Hierarchy Auto Setup (Optional)")]
+    [SerializeField] private bool autoSetupHierarchy = true;
+    [SerializeField] private Transform[] bodyParts;
+    [SerializeField] private Transform gun;
+    [SerializeField] private Transform shootPoint;
+
+    [Header("Auto Assign (Optional)")]
+    [SerializeField] private bool autoAssignByName = true;
+
     [Header("Rebuild")]
     [SerializeField] private bool clearBeforeRebuild = true;
 
@@ -64,11 +75,110 @@ public sealed class FootprintVisualBaker : MonoBehaviour
 
     public void Rebuild()
     {
-        if (mask == null || !mask.IsValid) return;
-        if (baseTilePrefab == null) return;
+        TryRebuild(out _);
+    }
 
+    public bool TryRebuild(out string reason)
+    {
+        return TryRebuildInternal(out reason, false);
+    }
+
+    public void AutoSetupAndRebuild()
+    {
+        TryAutoSetupAndRebuild(out _);
+    }
+
+    public bool TryAutoSetupAndRebuild(out string reason)
+    {
+        return TryRebuildInternal(out reason, true);
+    }
+
+    public bool HasRequiredInputs(out string reason)
+    {
+        return HasRequiredInputsInternal(out reason, false);
+    }
+
+    public bool HasRequiredInputsForAutoSetup(out string reason)
+    {
+        return HasRequiredInputsInternal(out reason, true);
+    }
+
+    public bool TryAutoAssignReferences(out string reason, bool overwriteExisting)
+    {
+        return AutoAssignReferencesInternal(out reason, overwriteExisting);
+    }
+
+    public bool GetValidationReport(out string report)
+    {
+        List<string> missing = null;
+        List<string> optional = null;
+
+        if (mask == null || !mask.IsValid)
+            AppendMissing(ref missing, "Mask");
+        if (baseTilePrefab == null)
+            AppendMissing(ref missing, "BaseTilePrefab");
+        if (autoPlaceVisualRoot && visualRoot == null)
+            AppendMissing(ref missing, "VisualRoot");
+
+        if (autoSetupHierarchy)
+        {
+            if (bodyParts == null || bodyParts.Length == 0)
+                AppendMissing(ref optional, "BodyParts");
+            if (gun == null)
+                AppendMissing(ref optional, "Gun");
+            if (shootPoint == null)
+                AppendMissing(ref optional, "ShootPoint");
+        }
+
+        if (missing == null && optional == null)
+        {
+            report = "OK";
+            return true;
+        }
+
+        if (missing != null)
+            report = $"Missing: {string.Join(", ", missing)}";
+        else
+            report = string.Empty;
+
+        if (optional != null)
+        {
+            if (!string.IsNullOrEmpty(report)) report += " | ";
+            report += $"Optional: {string.Join(", ", optional)}";
+        }
+
+        return missing == null;
+    }
+
+    public void EnsureStructure()
+    {
         EnsureRoots();
         EnsureBoundsRoot();
+    }
+
+    public void AutoAssignDefaults()
+    {
+        if (!normalizeAnchorToCell) normalizeAnchorToCell = true;
+        if (!centerFootprintOnRoot) centerFootprintOnRoot = true;
+    }
+
+    private bool TryRebuildInternal(out string reason, bool includeAutoSetup)
+    {
+        if (!HasRequiredInputsInternal(out reason, includeAutoSetup)) return false;
+
+        EnsureStructure();
+
+        if (includeAutoSetup)
+            AutoSetupHierarchy();
+
+        AutoAssignDefaults();
+
+        RebuildInternal();
+        return true;
+    }
+
+    private void RebuildInternal()
+    {
 
         if (clearBeforeRebuild)
         {
@@ -94,13 +204,16 @@ public sealed class FootprintVisualBaker : MonoBehaviour
         Bounds tileBounds = default;
         Vector3 tileCenter = Vector3.zero;
         bool hasTileBounds = false;
-        if (normalizeTileToCell)
+        if (normalizeTileToCell || useBaseTileBottomOffset)
         {
             tileBounds = GetPrefabBounds(baseTilePrefab);
             hasTileBounds = tileBounds.size.x > 0.0001f && tileBounds.size.z > 0.0001f;
             if (centerTileToCell && hasTileBounds)
                 tileCenter = tileBounds.center;
         }
+        float bottomOffset = 0f;
+        if (useBaseTileBottomOffset && hasTileBounds)
+            bottomOffset = -tileBounds.min.y * Mathf.Max(0.01f, tileScaleMultiplier);
 
         for (int y = 0; y < mask.Height; y++)
         {
@@ -131,7 +244,7 @@ public sealed class FootprintVisualBaker : MonoBehaviour
                     if (centerTileToCell && hasTileBounds)
                         offset = new Vector3(-tileCenter.x * baseScale.x, 0f, -tileCenter.z * baseScale.z);
                 }
-                tile.transform.localPosition = pos + offset;
+                tile.transform.localPosition = pos + offset + new Vector3(0f, bottomOffset, 0f);
             }
         }
 
@@ -141,22 +254,22 @@ public sealed class FootprintVisualBaker : MonoBehaviour
             {
                 for (int x = 0; x < mask.Width; x++)
                 {
-                if (!mask.GetCell(x, y)) continue;
-                Vector3 pos = CellToLocal(x, y, pivot, sizeX, sizeZ) + baseTileOffset + boundsTileOffset + layoutOffset;
-                var tile = CreateBoundsTile(hideBoundsTiles);
-                tile.name = $"Bounds_{x}_{y}";
-                tile.transform.SetParent(boundsRoot, false);
-                tile.transform.localPosition = pos + new Vector3(0f, boundsTileHeight * 0.5f, 0f);
-                tile.transform.localRotation = Quaternion.identity;
-                tile.transform.localScale = new Vector3(sizeX, Mathf.Max(0.001f, boundsTileHeight), sizeZ);
-            }
+                    if (!mask.GetCell(x, y)) continue;
+                    Vector3 pos = CellToLocal(x, y, pivot, sizeX, sizeZ) + baseTileOffset + boundsTileOffset + layoutOffset;
+                    var tile = CreateBoundsTile(hideBoundsTiles);
+                    tile.name = $"Bounds_{x}_{y}";
+                    tile.transform.SetParent(boundsRoot, false);
+                    tile.transform.localPosition = pos + new Vector3(0f, boundsTileHeight * 0.5f, 0f);
+                    tile.transform.localRotation = Quaternion.identity;
+                    tile.transform.localScale = new Vector3(sizeX, Mathf.Max(0.001f, boundsTileHeight), sizeZ);
+                }
         }
         }
 
         if (autoPlaceVisualRoot && visualRoot != null)
         {
             Vector3 lp = visualRoot.localPosition;
-            lp.y = baseTileOffset.y + tileTop + visualRootYOffset;
+            lp.y = baseTileOffset.y + bottomOffset + tileTop + visualRootYOffset;
             visualRoot.localPosition = lp;
         }
 
@@ -271,33 +384,410 @@ public sealed class FootprintVisualBaker : MonoBehaviour
     {
         if (basePlateRoot == null)
         {
-            var go = new GameObject("BasePlate");
-            go.transform.SetParent(transform, false);
-            basePlateRoot = go.transform;
+            basePlateRoot = FindChildByName("BasePlate");
+            if (basePlateRoot == null)
+            {
+                var go = new GameObject("BasePlate");
+                go.transform.SetParent(transform, false);
+                basePlateRoot = go.transform;
+            }
         }
 
         if (anchorRoot == null)
         {
-            var go = new GameObject("BaseAnchors");
-            go.transform.SetParent(transform, false);
-            anchorRoot = go.transform;
+            anchorRoot = FindChildByName("BaseAnchors");
+            if (anchorRoot == null)
+            {
+                var go = new GameObject("BaseAnchors");
+                go.transform.SetParent(transform, false);
+                anchorRoot = go.transform;
+            }
         }
 
         if (gridAnchor == null && autoPlaceGridAnchor && createGridAnchorIfMissing)
         {
-            var go = new GameObject("GridAnchor");
-            go.transform.SetParent(transform, false);
-            gridAnchor = go.transform;
+            gridAnchor = FindChildByName("GridAnchor");
+            if (gridAnchor == null)
+            {
+                var go = new GameObject("GridAnchor");
+                go.transform.SetParent(transform, false);
+                gridAnchor = go.transform;
+            }
         }
     }
 
     private void EnsureBoundsRoot()
     {
-        if (!buildBoundsTiles) return;
+        if (boundsRoot == null)
+            boundsRoot = FindChildByName("BasePlateBounds");
         if (boundsRoot != null) return;
         var go = new GameObject("BasePlateBounds");
         go.transform.SetParent(transform, false);
         boundsRoot = go.transform;
+    }
+
+    private Transform FindChildByName(string targetName)
+    {
+        if (string.IsNullOrEmpty(targetName)) return null;
+
+        Transform direct = transform.Find(targetName);
+        if (direct != null) return direct;
+
+        var list = GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < list.Length; i++)
+        {
+            Transform t = list[i];
+            if (t == null || t == transform) continue;
+            if (t.name == targetName) return t;
+        }
+
+        return null;
+    }
+
+    private bool HasRequiredInputsInternal(out string reason, bool includeAutoSetup)
+    {
+        List<string> missing = null;
+
+        if (mask == null || !mask.IsValid)
+            AppendMissing(ref missing, "Mask");
+        if (baseTilePrefab == null)
+            AppendMissing(ref missing, "BaseTilePrefab");
+        if (autoPlaceVisualRoot && visualRoot == null && !(includeAutoSetup && autoSetupHierarchy))
+            AppendMissing(ref missing, "VisualRoot");
+
+        if (missing == null)
+        {
+            reason = string.Empty;
+            return true;
+        }
+
+        reason = string.Join(", ", missing);
+        return false;
+    }
+
+    private static void AppendMissing(ref List<string> missing, string item)
+    {
+        if (missing == null) missing = new List<string>();
+        missing.Add(item);
+    }
+
+    private void AutoSetupHierarchy()
+    {
+        if (!autoSetupHierarchy) return;
+        if (Application.isPlaying) return;
+        if (!CanEditHierarchy())
+        {
+            Debug.LogWarning($"[{nameof(FootprintVisualBaker)}] Auto setup requires editing the prefab asset.", this);
+            return;
+        }
+
+        EnsureVisualRoot();
+        AutoSetupBodyParts();
+        AutoSetupGun();
+    }
+
+    private void EnsureVisualRoot()
+    {
+        if (visualRoot != null) return;
+
+        string preferred = $"{name}_VisualRoot";
+        visualRoot = FindChildByName(preferred);
+        if (visualRoot == null)
+            visualRoot = FindChildByName("VisualRoot");
+        if (visualRoot == null)
+        {
+            var go = new GameObject(preferred);
+            go.transform.SetParent(transform, false);
+            visualRoot = go.transform;
+        }
+    }
+
+    private void AutoSetupBodyParts()
+    {
+        if (visualRoot == null || bodyParts == null) return;
+
+        for (int i = 0; i < bodyParts.Length; i++)
+        {
+            Transform part = bodyParts[i];
+            if (part == null) continue;
+            if (part == visualRoot || part.IsChildOf(visualRoot)) continue;
+            part.SetParent(visualRoot, true);
+        }
+    }
+
+    private void AutoSetupGun()
+    {
+        if (gun == null) return;
+
+        Transform yawPivot = gun;
+        Transform pitchPivot = FindChildByName(yawPivot, "PitchPivot") ?? FindChildByName(yawPivot, "Pitch");
+        Transform gunVisual = null;
+        bool wrapped = false;
+
+        if (pitchPivot == null)
+        {
+            if (HasRendererOnSelf(gun))
+            {
+                Transform oldGun = gun;
+                string baseName = oldGun.name;
+                yawPivot = new GameObject(baseName).transform;
+                yawPivot.SetParent(oldGun.parent, false);
+                yawPivot.localPosition = oldGun.localPosition;
+                yawPivot.localRotation = Quaternion.identity;
+                yawPivot.localScale = Vector3.one;
+
+                oldGun.SetParent(yawPivot, true);
+                oldGun.name = MakeVisualName(baseName);
+                gunVisual = oldGun;
+                gun = yawPivot;
+                wrapped = true;
+            }
+
+            pitchPivot = EnsureChild(yawPivot, "PitchPivot");
+        }
+
+        Transform gunVisualRoot = EnsureChild(pitchPivot, "GunVisualRoot");
+        Transform gunMeshOffset = EnsureChild(gunVisualRoot, "GunMeshOffset");
+
+        if (!wrapped)
+            gunVisual = FindGunVisualCandidate(yawPivot, pitchPivot);
+
+        if (gunVisual != null && !gunVisual.IsChildOf(gunMeshOffset))
+            gunVisual.SetParent(gunMeshOffset, true);
+
+        if (shootPoint != null && !shootPoint.IsChildOf(yawPivot))
+            shootPoint.SetParent(yawPivot, true);
+
+        AssignTowerEntityPivots(yawPivot, pitchPivot, shootPoint);
+    }
+
+    private static bool HasRendererOnSelf(Transform t)
+    {
+        if (t == null) return false;
+        return t.GetComponent<Renderer>() != null;
+    }
+
+    private bool AutoAssignReferencesInternal(out string reason, bool overwriteExisting)
+    {
+        if (!autoAssignByName)
+        {
+            reason = "Auto assign disabled";
+            return true;
+        }
+
+        int assigned = 0;
+        List<string> missing = null;
+        var sb = new System.Text.StringBuilder();
+
+        if (overwriteExisting || bodyParts == null || bodyParts.Length == 0)
+        {
+            var parts = FindBodyPartsByName();
+            if (parts.Count > 0)
+            {
+                bodyParts = parts.ToArray();
+                assigned += parts.Count;
+                sb.Append($"BodyParts={parts.Count}");
+            }
+            else
+            {
+                AppendMissing(ref missing, "BodyParts");
+            }
+        }
+
+        if (overwriteExisting || gun == null)
+        {
+            var foundGun = FindByNameTokens(GunTokens, GunExcludeTokens);
+            if (foundGun != null)
+            {
+                gun = foundGun;
+                assigned++;
+                if (sb.Length > 0) sb.Append(", ");
+                sb.Append("Gun=1");
+            }
+            else
+            {
+                AppendMissing(ref missing, "Gun");
+            }
+        }
+
+        if (overwriteExisting || shootPoint == null)
+        {
+            var foundShoot = FindByNameTokens(ShootTokens, ShootExcludeTokens);
+            if (foundShoot != null)
+            {
+                shootPoint = foundShoot;
+                assigned++;
+                if (sb.Length > 0) sb.Append(", ");
+                sb.Append("ShootPoint=1");
+            }
+            else
+            {
+                AppendMissing(ref missing, "ShootPoint");
+            }
+        }
+
+        if (sb.Length == 0)
+            sb.Append("No changes");
+
+        if (missing != null)
+        {
+            sb.Append(" | Missing: ");
+            sb.Append(string.Join(", ", missing));
+            reason = sb.ToString();
+            return false;
+        }
+
+        reason = sb.ToString();
+        return true;
+    }
+
+    private List<Transform> FindBodyPartsByName()
+    {
+        var result = new List<Transform>();
+        var list = GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < list.Length; i++)
+        {
+            Transform t = list[i];
+            if (t == null || t == transform) continue;
+            if (IsUnderReservedRoot(t)) continue;
+            if (ContainsAny(t.name, BodyExcludeTokens)) continue;
+            if (!ContainsAny(t.name, BodyTokens)) continue;
+            if (ContainsAny(t.name, GunTokens) || ContainsAny(t.name, ShootTokens)) continue;
+            result.Add(t);
+        }
+        return result;
+    }
+
+    private Transform FindByNameTokens(string[] tokens, string[] excludeTokens)
+    {
+        var list = GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < list.Length; i++)
+        {
+            Transform t = list[i];
+            if (t == null || t == transform) continue;
+            if (IsUnderReservedRoot(t)) continue;
+            if (!ContainsAny(t.name, tokens)) continue;
+            if (excludeTokens != null && ContainsAny(t.name, excludeTokens)) continue;
+            return t;
+        }
+        return null;
+    }
+
+    private static bool ContainsAny(string name, string[] tokens)
+    {
+        if (string.IsNullOrEmpty(name) || tokens == null || tokens.Length == 0) return false;
+        for (int i = 0; i < tokens.Length; i++)
+        {
+            if (name.IndexOf(tokens[i], System.StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+        }
+        return false;
+    }
+
+    private static bool IsReservedRootName(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return false;
+        return string.Equals(name, "BasePlate", System.StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, "BaseAnchors", System.StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, "BasePlateBounds", System.StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, "GridAnchor", System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsUnderReservedRoot(Transform t)
+    {
+        if (t == null) return false;
+        Transform cur = t;
+        while (cur != null && cur != transform)
+        {
+            if (IsReservedRootName(cur.name)) return true;
+            cur = cur.parent;
+        }
+        return false;
+    }
+
+    private bool CanEditHierarchy()
+    {
+#if UNITY_EDITOR
+        if (!UnityEditor.PrefabUtility.IsPartOfPrefabInstance(gameObject)) return true;
+        var stage = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
+        if (stage != null && stage.IsPartOfPrefabContents(gameObject)) return true;
+        return false;
+#else
+        return true;
+#endif
+    }
+
+    private static readonly string[] BodyTokens = { "base", "mid" };
+    private static readonly string[] BodyExcludeTokens = { "baseplate", "bounds", "anchor", "grid", "gun", "shoot", "muzzle" };
+    private static readonly string[] GunTokens = { "gun" };
+    private static readonly string[] GunExcludeTokens = { "gunvisualroot", "gunmeshoffset", "visualroot", "pitch" };
+    private static readonly string[] ShootTokens = { "shoot", "muzzle" };
+    private static readonly string[] ShootExcludeTokens = { "vfx", "effect" };
+
+    private static string MakeVisualName(string baseName)
+    {
+        if (string.IsNullOrEmpty(baseName)) return "Gun_Visual";
+        if (baseName.EndsWith("_Visual"))
+            return baseName;
+        return $"{baseName}_Visual";
+    }
+
+    private Transform FindGunVisualCandidate(Transform yawPivot, Transform pitchPivot)
+    {
+        if (yawPivot == null) return null;
+
+        for (int i = 0; i < yawPivot.childCount; i++)
+        {
+            Transform child = yawPivot.GetChild(i);
+            if (child == null || child == pitchPivot) continue;
+            if (shootPoint != null && child == shootPoint) continue;
+            if (child.GetComponentInChildren<Renderer>(true) != null)
+                return child;
+        }
+
+        return null;
+    }
+
+    private static Transform EnsureChild(Transform parent, string childName)
+    {
+        if (parent == null || string.IsNullOrEmpty(childName)) return null;
+        var existing = FindChildByName(parent, childName);
+        if (existing != null) return existing;
+        var go = new GameObject(childName);
+        go.transform.SetParent(parent, false);
+        return go.transform;
+    }
+
+    private static Transform FindChildByName(Transform root, string targetName)
+    {
+        if (root == null || string.IsNullOrEmpty(targetName)) return null;
+
+        Transform direct = root.Find(targetName);
+        if (direct != null) return direct;
+
+        var list = root.GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < list.Length; i++)
+        {
+            Transform t = list[i];
+            if (t == null || t == root) continue;
+            if (t.name == targetName) return t;
+        }
+
+        return null;
+    }
+
+    private void AssignTowerEntityPivots(Transform yawPivot, Transform pitchPivot, Transform muzzle)
+    {
+#if UNITY_EDITOR
+        var tower = GetComponent<TowerEntity>();
+        if (tower == null) return;
+
+        var so = new UnityEditor.SerializedObject(tower);
+        so.FindProperty("yawPivot").objectReferenceValue = yawPivot;
+        so.FindProperty("pitchPivot").objectReferenceValue = pitchPivot;
+        so.FindProperty("muzzle").objectReferenceValue = muzzle;
+        so.ApplyModifiedPropertiesWithoutUndo();
+#endif
     }
 
     private static float GetPrefabTopY(GameObject prefab)

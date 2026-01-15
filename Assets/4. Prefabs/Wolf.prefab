@@ -369,6 +369,14 @@ MonoBehaviour:
   animator: {fileID: 0}
   rotateLerp: 12
   moveThreshold: 0.02
+  targetMode: 0
+  retargetInterval: 0.3
+  usePlayerPriority: 1
+  playerPriorityRange: 5
+  playerPriorityLoseRange: 7
+  drawPlayerPriorityGizmo: 1
+  playerPriorityGizmoColor: {r: 1, g: 0.85, b: 0.2, a: 0.45}
+  playerPriorityLoseGizmoColor: {r: 1, g: 0.45, b: 0.1, a: 0.25}
 --- !u!114 &1298438295922598077
 MonoBehaviour:
   m_ObjectHideFlags: 0

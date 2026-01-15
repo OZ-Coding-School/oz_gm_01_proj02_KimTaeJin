@@ -16,6 +16,14 @@ public sealed class HouseDrift : MonoBehaviour
 
     private static readonly RaycastHit[] _hits = new RaycastHit[8];
 
+    private void Awake()
+    {
+        if (obstacleMask.value != 0) return;
+        int harvest = LayerMask.NameToLayer("Harvest");
+        if (harvest >= 0 && harvest < 32)
+            obstacleMask = 1 << harvest;
+    }
+
     void Update()
     {
         if (IsBlocked()) return;

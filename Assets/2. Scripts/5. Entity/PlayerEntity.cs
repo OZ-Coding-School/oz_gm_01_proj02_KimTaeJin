@@ -13,6 +13,7 @@ public sealed class PlayerEntity : MonoBehaviour
     public AbilitySystem Ability { get; private set; }
     public PlayerMeleeAutoAttack Melee { get; private set; }
     public PlayerHarvestAutoAttack Harvest { get; private set; }
+    public PlayerExperience Experience { get; private set; }
 
     public void Construct(RunScope scope)
     {
@@ -28,6 +29,7 @@ public sealed class PlayerEntity : MonoBehaviour
         Melee.Construct(_scope);
         Harvest = GetOrAdd<PlayerHarvestAutoAttack>();
         Harvest.Construct(_scope);
+        Experience = GetOrAdd<PlayerExperience>();
     }
     public void SetMoveSpeedMultiplier(float mul) => Controller?.SetMoveSpeedMultiplier(mul);
     public void AddMoveSpeedMultiplier(float add) => Controller?.AddMoveSpeedMultiplier(add);

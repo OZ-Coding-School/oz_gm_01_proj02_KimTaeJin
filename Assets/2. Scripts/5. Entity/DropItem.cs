@@ -5,6 +5,7 @@ public sealed class DropItem : MonoBehaviour
 {
     [Header("Value")]
     [SerializeField] private int amount = 1;
+    [SerializeField] private ResourceType resourceType = ResourceType.Wood;
 
     [Header("Spawn Pop")]
     [SerializeField] private float popDuration = 0.2f;
@@ -29,6 +30,7 @@ public sealed class DropItem : MonoBehaviour
     private Collider _col;
     private Rigidbody _rb;
     public int Amount => amount;
+    public ResourceType ResourceType => resourceType;
     private bool _isFollower;
 
     public void AddAmount(int add)
@@ -132,6 +134,14 @@ public sealed class DropItem : MonoBehaviour
     {
         if (_player == null)
         {
+            Destroy(gameObject);
+            return;
+        }
+
+        if (resourceType == ResourceType.Exp)
+        {
+            var xp = _player.GetComponentInParent<PlayerExperience>();
+            if (xp != null) xp.AddExp(amount);
             Destroy(gameObject);
             return;
         }

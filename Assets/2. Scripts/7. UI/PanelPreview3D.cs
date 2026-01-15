@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.UI;
 
 public sealed class PanelPreview3D : MonoBehaviour
@@ -10,6 +11,9 @@ public sealed class PanelPreview3D : MonoBehaviour
     [SerializeField] private RawImage targetImage;
     [SerializeField] private RenderTexture renderTexture;
     [SerializeField] private LayerMask previewLayer;
+    [SerializeField] private bool autoIsolatePreviewLayer = true;
+    [SerializeField] private int fallbackPreviewLayerIndex = 30;
+    [SerializeField] private bool debugPreviewPlacements = false;
     [SerializeField] private bool transparentBackground = true;
     [SerializeField] private Color previewBackgroundColor = new Color(0f, 0f, 0f, 1f);
     [SerializeField] private bool excludePreviewLayerFromMainCamera = true;
@@ -25,6 +29,10 @@ public sealed class PanelPreview3D : MonoBehaviour
     [SerializeField] private Light previewLight;
     [SerializeField] private bool useDetachedPreviewRoot = true;
     [SerializeField] private bool stripPreviewComponents = true;
+    [SerializeField] private bool isolatePreviewWorld = true;
+    [SerializeField] private Vector3 previewWorldOffset = new Vector3(10000f, 10000f, 10000f);
+    [SerializeField] private float previewNearClip = 0.05f;
+    [SerializeField] private float previewFarClip = 200f;
 
     [Header("Camera Rig")]
     [SerializeField] private bool autoSetupCamera = true;
@@ -68,9 +76,25 @@ public sealed class PanelPreview3D : MonoBehaviour
     [SerializeField] private bool normalizeTileToCell = true;
     [SerializeField] private bool centerTileToCell = true;
     [SerializeField] private float tileYOffset = -0.02f;
+    [SerializeField] private Vector2 tileGridOffset = Vector2.zero;
+    [SerializeField] private float tileGridScale = 1f;
     [SerializeField] private Color tileNormalColor = new Color(0.55f, 0.55f, 0.55f, 1f);
     [SerializeField] private Color tileBlockedColor = new Color(0.25f, 0.25f, 0.25f, 1f);
     [SerializeField] private Color tileOccupiedColor = new Color(0.2f, 0.2f, 0.2f, 1f);
+
+    [Header("Road Tiles")]
+    [SerializeField] private GameObject roadTilePrefab;
+    [SerializeField] private Transform roadRoot;
+    [SerializeField] private bool roadMatchGridTileSettings = true;
+    [SerializeField] private bool roadUseBottomOffset = true;
+    [SerializeField] private float roadTileYOffset = -0.015f;
+    [SerializeField] private float roadTileScale = 1f;
+    [SerializeField] private Vector2 roadTileGridOffset = Vector2.zero;
+
+    [Header("Placed Preview Height")]
+    [SerializeField] private bool matchPlacedToRoadHeight = true;
+    [SerializeField] private float placedPreviewYOffset = 0f;
+    [SerializeField] private bool matchCenterToRoadHeight = true;
 
     [Header("Center Building")]
     [SerializeField] private GameObject centerPrefab;
@@ -90,8 +114,14 @@ public sealed class PanelPreview3D : MonoBehaviour
     [Header("Placement Move")]
     [SerializeField] private float placementMoveDuration = 0.12f;
     [SerializeField] private Ease placementMoveEase = Ease.OutQuad;
+    [SerializeField] private bool showPlacementPreview = true;
+
+    [Header("Placed Parent")]
+    [SerializeField] private bool useCenterGridAnchorForPlaced = true;
+    [SerializeField] private string centerGridAnchorName = "GridAnchor";
 
     private GameObject _centerInstance;
+    private Transform _centerGridAnchor;
     private GameObject _placementInstance;
     private Renderer[] _placementRenderers;
     private MaterialPropertyBlock _mpb;
@@ -102,6 +132,9 @@ public sealed class PanelPreview3D : MonoBehaviour
     private Vector2Int _rtSize;
     private Transform _lineRoot;
     private readonly List<GameObject> _placedInstances = new();
+    private readonly List<GameObject> _roadInstances = new();
+    private readonly Dictionary<TowerEntity, GameObject> _placedByTower = new();
+    private readonly List<TowerEntity> _placedToRemove = new();
     private readonly Dictionary<Transform, Vector3> _baseScales = new();
     private readonly Dictionary<Transform, Bounds> _baseBounds = new();
     private readonly Dictionary<Transform, Vector2Int> _placedCells = new();
@@ -113,6 +146,9 @@ public sealed class PanelPreview3D : MonoBehaviour
     private Renderer[,] _tileRenderers;
     private MaterialPropertyBlock _tileMpb;
     private Vector2Int _centerPivot = Vector2Int.zero;
+    private LayerMask _cachedPreviewLayerMask;
+    private int _cachedPreviewLayerIndex = -1;
+    private bool _previewLayerCached;
 
     public int GridWidth => gridWidth;
     public int GridHeight => gridHeight;
@@ -131,11 +167,22 @@ public sealed class PanelPreview3D : MonoBehaviour
         SetupRenderTarget();
         ApplyCameraSettings();
     }
+
+    private void OnEnable()
+    {
+        RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;
+    }
+
+    private void OnDisable()
+    {
+        RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
+    }
     
     private void LateUpdate()
     {
         if (autoResizeRenderTexture)
             UpdateRenderTextureFromTarget();
+        ApplyPreviewLayerExclusion();
     }
 
     public void SyncFromGridView(PanelGridView grid)
@@ -224,6 +271,7 @@ public sealed class PanelPreview3D : MonoBehaviour
         PreparePreviewObject(_centerInstance);
 
         _centerInstance.transform.localRotation = Quaternion.Euler(centerRotation);
+        CacheCenterGridAnchor();
 
         CacheBaseMetrics(_centerInstance);
         FitToFootprint(_centerInstance, centerFootprint);
@@ -233,8 +281,18 @@ public sealed class PanelPreview3D : MonoBehaviour
 
     public void SyncPlacedTowers(IReadOnlyList<TowerEntity> towers)
     {
-        ClearPlacedTowers();
-        if (towers == null || previewRoot == null) return;
+        ClearPlacementPreview();
+        SetPlacementActive(false);
+        if (towers == null || previewRoot == null)
+        {
+            ClearPlacedTowers();
+            return;
+        }
+
+        if (debugPreviewPlacements)
+            Debug.Log($"[PanelPreview3D] SyncPlacedTowers count={towers.Count} center={GetCenterCell()} mask={GetEffectivePreviewLayerMask().value}");
+
+        _placedToRemove.Clear();
 
         for (int i = 0; i < towers.Count; i++)
         {
@@ -243,9 +301,14 @@ public sealed class PanelPreview3D : MonoBehaviour
             var def = t.Definition;
             if (def == null || def.prefab == null) continue;
 
-            var go = Instantiate(def.prefab.gameObject, previewRoot);
-            go.name = $"[PlacedPreview]{def.id}";
-            PreparePreviewObject(go);
+            if (!_placedByTower.TryGetValue(t, out GameObject go) || go == null)
+            {
+                go = Instantiate(def.prefab.gameObject, previewRoot);
+                go.name = $"[PlacedPreview]{def.id}";
+                PreparePreviewObject(go);
+                _placedByTower[t] = go;
+                _placedInstances.Add(go);
+            }
 
             var towerEntity = go.GetComponentInChildren<TowerEntity>();
             if (towerEntity != null) towerEntity.enabled = false;
@@ -253,14 +316,55 @@ public sealed class PanelPreview3D : MonoBehaviour
             go.transform.localRotation = Quaternion.Euler(placementRotation);
             FootprintMaskUtility.GetFootprintData(def, out FootprintMaskSO mask, out Vector2Int size, out Vector2Int pivot);
             Vector2Int cell = GetCenterCell() + t.OffsetFromCenter;
+            if (debugPreviewPlacements)
+                Debug.Log($"[PanelPreview3D] {t.name} def={def.id} cell={t.Cell} offset={t.OffsetFromCenter} previewCell={cell}");
             CacheBaseMetrics(go);
             FitToFootprint(go, size);
-            PlaceAtCell(go.transform, cell, size, pivot);
+            PlaceAtCell(go.transform, cell, size, pivot, GetPlacedYOffset());
+            ReparentPlacedInstance(go);
             _placedCells[go.transform] = cell;
             _placedFootprints[go.transform] = size;
             _placedPivots[go.transform] = pivot;
 
-            _placedInstances.Add(go);
+            go.SetActive(true);
+        }
+
+        foreach (var kvp in _placedByTower)
+        {
+            if (kvp.Key == null || kvp.Value == null)
+            {
+                _placedToRemove.Add(kvp.Key);
+                continue;
+            }
+
+            bool stillExists = false;
+            for (int i = 0; i < towers.Count; i++)
+            {
+                if (towers[i] == kvp.Key)
+                {
+                    stillExists = true;
+                    break;
+                }
+            }
+            if (!stillExists)
+                _placedToRemove.Add(kvp.Key);
+        }
+
+        for (int i = 0; i < _placedToRemove.Count; i++)
+        {
+            TowerEntity t = _placedToRemove[i];
+            if (!_placedByTower.TryGetValue(t, out GameObject go)) continue;
+            if (go != null)
+            {
+                go.SetActive(false);
+                RemoveCachedMetrics(go.transform);
+                _placedCells.Remove(go.transform);
+                _placedFootprints.Remove(go.transform);
+                _placedPivots.Remove(go.transform);
+                _placedInstances.Remove(go);
+                Destroy(go);
+            }
+            _placedByTower.Remove(t);
         }
     }
 
@@ -270,6 +374,8 @@ public sealed class PanelPreview3D : MonoBehaviour
         {
             var go = _placedInstances[i];
             if (go == null) continue;
+            // Hide immediately to avoid one-frame overlap before Destroy completes.
+            go.SetActive(false);
             RemoveCachedMetrics(go.transform);
             Destroy(go);
         }
@@ -277,16 +383,24 @@ public sealed class PanelPreview3D : MonoBehaviour
         _placedCells.Clear();
         _placedFootprints.Clear();
         _placedPivots.Clear();
+        _placedByTower.Clear();
+        _placedToRemove.Clear();
     }
 
     public void SetPlacementPrefab(GameObject prefab)
     {
+        if (!showPlacementPreview)
+        {
+            ClearPlacementPreview();
+            return;
+        }
         if (_placementInstance != null)
         {
             RemoveCachedMetrics(_placementInstance.transform);
             Destroy(_placementInstance);
         }
         _placementRenderers = null;
+        _placementMoveTween?.Kill();
 
         if (prefab == null) return;
 
@@ -294,11 +408,25 @@ public sealed class PanelPreview3D : MonoBehaviour
         _placementInstance.name = "[PlacementPreview]";
         PreparePreviewObject(_placementInstance);
         _placementInstance.transform.localRotation = Quaternion.Euler(placementRotation);
+        ReparentPlacedInstance(_placementInstance);
 
         _placementRenderers = _placementInstance.GetComponentsInChildren<Renderer>(true);
         CacheBaseMetrics(_placementInstance);
         FitToFootprint(_placementInstance, _placementFootprint);
         _placementInstance.SetActive(false);
+    }
+
+    public void ClearPlacementPreview()
+    {
+        if (_placementInstance != null)
+        {
+            RemoveCachedMetrics(_placementInstance.transform);
+            Destroy(_placementInstance);
+        }
+        _placementInstance = null;
+        _placementRenderers = null;
+        _placementMoveTween?.Kill();
+        _hasPlacementCell = false;
     }
 
     public void SetPlacementRotation(Vector3 euler)
@@ -351,16 +479,17 @@ public sealed class PanelPreview3D : MonoBehaviour
 
     public void SetPlacementActive(bool on)
     {
+        if (!showPlacementPreview) on = false;
         if (_placementInstance != null)
             _placementInstance.SetActive(on);
     }
 
     public void SetPlacementCell(Vector2Int cell, bool smooth = true)
     {
-        if (_placementInstance == null) return;
+        if (!showPlacementPreview || _placementInstance == null) return;
         _placementCell = cell;
         _hasPlacementCell = true;
-        Vector3 target = GetCellWorldPosition(cell, _placementFootprint, _placementPivot, _placementInstance.transform);
+        Vector3 target = GetCellLocalPosition(cell, _placementFootprint, _placementPivot, _placementInstance.transform);
         _placementMoveTween?.Kill();
         if (smooth)
         {
@@ -376,6 +505,7 @@ public sealed class PanelPreview3D : MonoBehaviour
 
     public void SetPlacementTint(Color color)
     {
+        if (!showPlacementPreview) return;
         if (_placementRenderers == null || _placementRenderers.Length == 0) return;
 
         for (int i = 0; i < _placementRenderers.Length; i++)
@@ -384,6 +514,59 @@ public sealed class PanelPreview3D : MonoBehaviour
             if (r == null) continue;
             ApplyColor(r, _mpb, color);
         }
+    }
+
+    public bool TryCommitPlacementPreview(TowerEntity tower, Vector2Int cell, Vector2Int footprint, Vector2Int pivot)
+    {
+        if (_placementInstance == null || tower == null || previewRoot == null) return false;
+
+        _placementMoveTween?.Kill();
+        _placementMoveTween = null;
+
+        if (_placementRenderers != null)
+        {
+            for (int i = 0; i < _placementRenderers.Length; i++)
+            {
+                var r = _placementRenderers[i];
+                if (r == null) continue;
+                r.SetPropertyBlock(null);
+            }
+        }
+
+        GameObject go = _placementInstance;
+        _placementInstance = null;
+        _placementRenderers = null;
+        _hasPlacementCell = false;
+
+        if (_placedByTower.TryGetValue(tower, out GameObject existing) && existing != null && existing != go)
+        {
+            existing.SetActive(false);
+            RemoveCachedMetrics(existing.transform);
+            _placedCells.Remove(existing.transform);
+            _placedFootprints.Remove(existing.transform);
+            _placedPivots.Remove(existing.transform);
+            _placedInstances.Remove(existing);
+            Destroy(existing);
+        }
+
+        _placedByTower[tower] = go;
+        if (!_placedInstances.Contains(go))
+            _placedInstances.Add(go);
+
+        string id = tower.Definition != null ? tower.Definition.id : tower.name;
+        go.name = $"[PlacedPreview]{id}";
+        go.transform.localRotation = Quaternion.Euler(placementRotation);
+        CacheBaseMetrics(go);
+        FitToFootprint(go, footprint);
+        PlaceAtCell(go.transform, cell, footprint, pivot, GetPlacedYOffset());
+        ReparentPlacedInstance(go);
+
+        _placedCells[go.transform] = cell;
+        _placedFootprints[go.transform] = footprint;
+        _placedPivots[go.transform] = pivot;
+
+        go.SetActive(true);
+        return true;
     }
 
     private static void ApplyColor(Renderer r, MaterialPropertyBlock mpb, Color color)
@@ -402,28 +585,82 @@ public sealed class PanelPreview3D : MonoBehaviour
 
     private void PlaceAtCell(Transform t, Vector2Int cell, Vector2Int footprint)
     {
-        t.localPosition = GetCellWorldPosition(cell, footprint, Vector2Int.zero, t);
+        PlaceAtCell(t, cell, footprint, Vector2Int.zero, 0f);
     }
 
     private void PlaceAtCell(Transform t, Vector2Int cell, Vector2Int footprint, Vector2Int pivot)
     {
-        t.localPosition = GetCellWorldPosition(cell, footprint, pivot, t);
+        PlaceAtCell(t, cell, footprint, pivot, 0f);
+    }
+
+    private void PlaceAtCell(Transform t, Vector2Int cell, Vector2Int footprint, Vector2Int pivot, float yOffset)
+    {
+        Vector3 pos = GetCellLocalPosition(cell, footprint, pivot, t);
+        if (!Mathf.Approximately(yOffset, 0f))
+            pos.y += yOffset;
+        t.localPosition = pos;
     }
 
     private void PlaceAtGridCenter(Transform t)
     {
         Vector2Int anchor = GetCenteredFootprintAnchor(centerFootprint, _centerPivot);
-        PlaceAtCell(t, anchor, centerFootprint, _centerPivot);
+        PlaceAtCell(t, anchor, centerFootprint, _centerPivot, 0f);
     }
 
     private void ApplyCenterPreviewOffset(Transform t)
     {
         if (t == null) return;
+        float yOffset = centerPreviewYOffset;
+        if (matchCenterToRoadHeight)
+            yOffset += GetRoadTileLift();
         Vector3 offset = centerPreviewOffset;
-        if (!Mathf.Approximately(centerPreviewYOffset, 0f))
-            offset += Vector3.up * centerPreviewYOffset;
+        if (!Mathf.Approximately(yOffset, 0f))
+            offset += Vector3.up * yOffset;
         if (offset == Vector3.zero) return;
         t.localPosition += offset;
+    }
+
+    private float GetPlacedYOffset()
+    {
+        float yOffset = placedPreviewYOffset;
+        if (matchPlacedToRoadHeight)
+            yOffset += GetRoadTileLift();
+        return yOffset;
+    }
+
+    private float GetRoadTileLift()
+    {
+        GameObject prefab = roadTilePrefab != null ? roadTilePrefab : tilePrefab;
+        if (prefab == null) return 0f;
+
+        float yOffset = roadMatchGridTileSettings ? tileYOffset : roadTileYOffset;
+        if (!roadUseBottomOffset) return yOffset;
+
+        Bounds b = GetPrefabBounds(prefab);
+        if (b.size.y <= 0.0001f) return yOffset;
+        return yOffset + (-b.min.y);
+    }
+
+    private void CacheCenterGridAnchor()
+    {
+        _centerGridAnchor = null;
+        if (_centerInstance == null || string.IsNullOrEmpty(centerGridAnchorName)) return;
+        _centerGridAnchor = FindChildByName(_centerInstance.transform, centerGridAnchorName);
+    }
+
+    private Transform GetPlacedParent()
+    {
+        if (useCenterGridAnchorForPlaced && _centerGridAnchor != null)
+            return _centerGridAnchor;
+        return previewRoot;
+    }
+
+    private void ReparentPlacedInstance(GameObject go)
+    {
+        if (go == null) return;
+        Transform parent = GetPlacedParent();
+        if (parent == null || go.transform.parent == parent) return;
+        go.transform.SetParent(parent, true);
     }
 
     private Vector3 CellToWorld(Vector2Int cell)
@@ -433,6 +670,16 @@ public sealed class PanelPreview3D : MonoBehaviour
 
         float x = -totalW * 0.5f + (cell.x + 0.5f) * cellWorldWidth;
         float z = -totalH * 0.5f + (cell.y + 0.5f) * cellWorldHeight;
+        return new Vector3(x, 0f, z);
+    }
+
+    private Vector3 CellToWorld(Vector2Int cell, float cellWidth, float cellHeight)
+    {
+        float totalW = gridWidth * cellWidth;
+        float totalH = gridHeight * cellHeight;
+
+        float x = -totalW * 0.5f + (cell.x + 0.5f) * cellWidth;
+        float z = -totalH * 0.5f + (cell.y + 0.5f) * cellHeight;
         return new Vector3(x, 0f, z);
     }
 
@@ -449,6 +696,19 @@ public sealed class PanelPreview3D : MonoBehaviour
         Vector3 centerOffset = new Vector3(-localCenter.x, 0f, -localCenter.z);
 
         return pos + footprintOffset + centerOffset + new Vector3(0f, bottomOffset, 0f) + sceneOffset;
+    }
+
+    private Vector3 GetCellLocalPosition(Vector2Int cell, Vector2Int footprint, Vector2Int pivot, Transform t)
+    {
+        Vector3 previewLocal = GetCellWorldPosition(cell, footprint, pivot, t);
+        if (t == null) return previewLocal;
+
+        Transform parent = t.parent;
+        if (parent == null || previewRoot == null || parent == previewRoot)
+            return previewLocal;
+
+        Vector3 world = previewRoot.TransformPoint(previewLocal);
+        return parent.InverseTransformPoint(world);
     }
 
     private Vector3 GetFootprintOffset(Vector2Int footprint, Vector2Int pivot)
@@ -533,7 +793,7 @@ public sealed class PanelPreview3D : MonoBehaviour
             if (_placedPivots.TryGetValue(t, out Vector2Int p))
                 pivot = p;
             FitToFootprint(t.gameObject, footprint);
-            PlaceAtCell(t, kvp.Value, footprint, pivot);
+            PlaceAtCell(t, kvp.Value, footprint, pivot, GetPlacedYOffset());
         }
     }
 
@@ -794,7 +1054,15 @@ public sealed class PanelPreview3D : MonoBehaviour
 
     private void ApplyCameraSettings()
     {
+        EnsurePreviewRoot();
         if (previewCamera == null) return;
+        if (previewCamera.GetComponent<PlayAreaFogIgnore>() == null)
+            previewCamera.gameObject.AddComponent<PlayAreaFogIgnore>();
+        if (isolatePreviewWorld)
+        {
+            previewCamera.nearClipPlane = Mathf.Max(0.01f, previewNearClip);
+            previewCamera.farClipPlane = Mathf.Max(previewCamera.nearClipPlane + 1f, previewFarClip);
+        }
         previewCamera.orthographic = useOrthographic;
         if (useOrthographic)
         {
@@ -815,22 +1083,32 @@ public sealed class PanelPreview3D : MonoBehaviour
         {
             previewCamera.fieldOfView = Mathf.Clamp(perspectiveFov, 10f, 80f);
         }
-        previewCamera.cullingMask = previewLayer;
+        previewCamera.cullingMask = GetPreviewLayerMask();
         previewCamera.clearFlags = CameraClearFlags.SolidColor;
-        previewCamera.backgroundColor = transparentBackground
-            ? new Color(0f, 0f, 0f, 0f)
-            : previewBackgroundColor;
+        bool useTransparent = transparentBackground && !ShouldForceOpaqueBackground();
+        if (useTransparent)
+        {
+            previewCamera.backgroundColor = new Color(0f, 0f, 0f, 0f);
+        }
+        else
+        {
+            Color bg = previewBackgroundColor;
+            bg.a = 1f;
+            previewCamera.backgroundColor = bg;
+        }
+        ApplyTargetImageTint(useTransparent);
         ApplyPreviewLayerExclusion();
 
-        if (autoSetupCamera && previewRoot != null)
+        bool forceRig = isolatePreviewWorld;
+        if ((autoSetupCamera || forceRig) && previewRoot != null)
         {
             previewCamera.transform.SetParent(previewRoot, false);
-            if (lockCameraTopDown)
+            if (autoSetupCamera && lockCameraTopDown)
             {
                 previewCamera.transform.localPosition = new Vector3(0f, Mathf.Max(0.1f, topDownHeight), 0f);
                 previewCamera.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             }
-            else
+            else if (autoSetupCamera)
             {
                 previewCamera.transform.localPosition = cameraOffset;
                 if (cameraEuler != Vector3.zero)
@@ -840,15 +1118,15 @@ public sealed class PanelPreview3D : MonoBehaviour
             }
         }
 
-        if (autoSetupCamera && previewLight != null && previewRoot != null)
+        if ((autoSetupCamera || forceRig) && previewLight != null && previewRoot != null)
         {
             previewLight.transform.SetParent(previewRoot, false);
-            if (lockCameraTopDown)
+            if (autoSetupCamera && lockCameraTopDown)
             {
                 previewLight.transform.localPosition = new Vector3(0f, Mathf.Max(0.1f, topDownHeight), 0f);
                 previewLight.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             }
-            else
+            else if (autoSetupCamera)
             {
                 previewLight.transform.localPosition = cameraOffset;
                 if (cameraEuler != Vector3.zero)
@@ -858,7 +1136,77 @@ public sealed class PanelPreview3D : MonoBehaviour
             }
         }
 
+        ApplyPerspectiveFitToGrid();
         ApplyCellAspectCompensation();
+    }
+
+    private void ApplyPerspectiveFitToGrid()
+    {
+        if (previewCamera == null || previewRoot == null) return;
+        if (!autoSetupCamera || useOrthographic || !autoFitToGrid || lockCameraTopDown) return;
+
+        if (!TryGetPreviewBounds(out Bounds bounds)) return;
+
+        float padding = Mathf.Max(1f, fitPadding);
+        bounds.extents *= padding;
+
+        float fov = Mathf.Deg2Rad * Mathf.Clamp(previewCamera.fieldOfView, 10f, 80f);
+        float tanHalfV = Mathf.Tan(fov * 0.5f);
+        float aspect = Mathf.Max(0.01f, previewCamera.aspect);
+        float tanHalfH = tanHalfV * aspect;
+
+        Vector3[] corners = GetBoundsCorners(bounds);
+        float maxDelta = 0f;
+        float near = Mathf.Max(0.01f, previewCamera.nearClipPlane);
+
+        for (int i = 0; i < corners.Length; i++)
+        {
+            Vector3 p = previewCamera.transform.InverseTransformPoint(corners[i]);
+            float reqZ = Mathf.Max(Mathf.Abs(p.x) / tanHalfH, Mathf.Abs(p.y) / tanHalfV);
+            maxDelta = Mathf.Max(maxDelta, reqZ - p.z);
+            maxDelta = Mathf.Max(maxDelta, near - p.z);
+        }
+
+        if (maxDelta > 0.001f)
+        {
+            Vector3 back = previewCamera.transform.forward * maxDelta;
+            previewCamera.transform.position -= back;
+            if (previewLight != null)
+                previewLight.transform.position -= back;
+        }
+    }
+
+    private float GetMaxPreviewHeight()
+    {
+        if (previewRoot == null) return 0f;
+        float rootY = previewRoot.position.y;
+        float max = 0f;
+
+        if (_placementInstance != null)
+            AccumulateHeight(_placementInstance, rootY, ref max);
+
+        if (_centerInstance != null)
+            AccumulateHeight(_centerInstance, rootY, ref max);
+
+        for (int i = 0; i < _placedInstances.Count; i++)
+        {
+            var go = _placedInstances[i];
+            if (go == null) continue;
+            AccumulateHeight(go, rootY, ref max);
+        }
+
+        return Mathf.Max(0f, max);
+    }
+
+    private static void AccumulateHeight(GameObject go, float rootY, ref float maxHeight)
+    {
+        if (go == null) return;
+        var renderers = go.GetComponentsInChildren<Renderer>(true);
+        if (renderers == null || renderers.Length == 0) return;
+        Bounds b = GetBounds(renderers);
+        float h = b.max.y - rootY;
+        if (h > maxHeight)
+            maxHeight = h;
     }
 
     private void RebuildGridLines()
@@ -918,6 +1266,80 @@ public sealed class PanelPreview3D : MonoBehaviour
         }
     }
 
+    public void SetRoadCells(IReadOnlyCollection<Vector2Int> cells)
+    {
+        ClearRoadTiles();
+        if (cells == null || cells.Count == 0) return;
+        if (roadTilePrefab == null || previewRoot == null) return;
+
+        EnsureRoadRoot();
+        if (roadRoot == null) return;
+
+        Vector3 baseScale = roadTilePrefab.transform.localScale;
+        Bounds tileBounds = default;
+        Vector3 tileCenter = Vector3.zero;
+        bool hasTileBounds = false;
+
+        float scale = roadMatchGridTileSettings ? tileGridScale : roadTileScale;
+        Vector2 gridOffset = roadMatchGridTileSettings ? tileGridOffset : roadTileGridOffset;
+        float yOffset = roadMatchGridTileSettings ? tileYOffset : roadTileYOffset;
+
+        float tileScale = Mathf.Max(0.01f, scale);
+        float tileCellWidth = cellWorldWidth * tileScale;
+        float tileCellHeight = cellWorldHeight * tileScale;
+
+        if (normalizeTileToCell)
+        {
+            tileBounds = GetPrefabBounds(roadTilePrefab);
+            hasTileBounds = tileBounds.size.x > 0.0001f && tileBounds.size.z > 0.0001f;
+            if (centerTileToCell && hasTileBounds)
+                tileCenter = tileBounds.center;
+        }
+        float bottomOffset = (roadUseBottomOffset && hasTileBounds) ? -tileBounds.min.y : 0f;
+
+        foreach (var cell in cells)
+        {
+            var go = Instantiate(roadTilePrefab, roadRoot);
+            go.name = $"[RoadTile]{cell.x}_{cell.y}";
+            PreparePreviewObject(go);
+
+            Vector3 pos = CellToWorld(cell, tileCellWidth, tileCellHeight) + sceneOffset;
+            Vector3 offset = Vector3.zero;
+            go.transform.localRotation = Quaternion.identity;
+            if (normalizeTileToCell && hasTileBounds)
+            {
+                float sx = tileCellWidth / Mathf.Max(0.0001f, tileBounds.size.x);
+                float sz = tileCellHeight / Mathf.Max(0.0001f, tileBounds.size.z);
+                go.transform.localScale = new Vector3(baseScale.x * sx, baseScale.y, baseScale.z * sz);
+                if (centerTileToCell)
+                    offset = new Vector3(-tileCenter.x * sx, 0f, -tileCenter.z * sz);
+            }
+            else
+            {
+                go.transform.localScale = new Vector3(baseScale.x * tileCellWidth, baseScale.y, baseScale.z * tileCellHeight);
+                if (centerTileToCell && hasTileBounds)
+                    offset = new Vector3(-tileCenter.x * baseScale.x, 0f, -tileCenter.z * baseScale.z);
+            }
+
+            go.transform.localPosition = pos + new Vector3(gridOffset.x, yOffset + bottomOffset, gridOffset.y) + offset;
+            _roadInstances.Add(go);
+        }
+    }
+
+    public void ClearRoadTiles()
+    {
+        if (_roadInstances.Count == 0) return;
+
+        for (int i = 0; i < _roadInstances.Count; i++)
+        {
+            var go = _roadInstances[i];
+            if (go == null) continue;
+            go.SetActive(false);
+            Destroy(go);
+        }
+        _roadInstances.Clear();
+    }
+
     private void RebuildTiles()
     {
         if (!autoBuildTiles || tilePrefab == null || previewRoot == null) return;
@@ -929,6 +1351,9 @@ public sealed class PanelPreview3D : MonoBehaviour
         Bounds tileBounds = default;
         Vector3 tileCenter = Vector3.zero;
         bool hasTileBounds = false;
+        float tileScale = Mathf.Max(0.01f, tileGridScale);
+        float tileCellWidth = cellWorldWidth * tileScale;
+        float tileCellHeight = cellWorldHeight * tileScale;
         if (normalizeTileToCell)
         {
             tileBounds = GetPrefabBounds(tilePrefab);
@@ -945,24 +1370,24 @@ public sealed class PanelPreview3D : MonoBehaviour
                 go.name = $"[Tile]{x}_{y}";
                 PreparePreviewObject(go);
 
-                Vector3 pos = CellToWorld(new Vector2Int(x, y)) + sceneOffset;
+                Vector3 pos = CellToWorld(new Vector2Int(x, y), tileCellWidth, tileCellHeight) + sceneOffset;
                 Vector3 offset = Vector3.zero;
                 go.transform.localRotation = Quaternion.identity;
                 if (normalizeTileToCell && hasTileBounds)
                 {
-                    float sx = cellWorldWidth / Mathf.Max(0.0001f, tileBounds.size.x);
-                    float sz = cellWorldHeight / Mathf.Max(0.0001f, tileBounds.size.z);
+                    float sx = tileCellWidth / Mathf.Max(0.0001f, tileBounds.size.x);
+                    float sz = tileCellHeight / Mathf.Max(0.0001f, tileBounds.size.z);
                     go.transform.localScale = new Vector3(baseScale.x * sx, baseScale.y, baseScale.z * sz);
                     if (centerTileToCell)
                         offset = new Vector3(-tileCenter.x * sx, 0f, -tileCenter.z * sz);
                 }
                 else
                 {
-                    go.transform.localScale = new Vector3(baseScale.x * cellWorldWidth, baseScale.y, baseScale.z * cellWorldHeight);
+                    go.transform.localScale = new Vector3(baseScale.x * tileCellWidth, baseScale.y, baseScale.z * tileCellHeight);
                     if (centerTileToCell && hasTileBounds)
                         offset = new Vector3(-tileCenter.x * baseScale.x, 0f, -tileCenter.z * baseScale.z);
                 }
-                go.transform.localPosition = pos + new Vector3(0f, tileYOffset, 0f) + offset;
+                go.transform.localPosition = pos + new Vector3(tileGridOffset.x, tileYOffset, tileGridOffset.y) + offset;
 
                 var renderer = go.GetComponentInChildren<Renderer>();
                 _tileRenderers[x, y] = renderer;
@@ -987,6 +1412,15 @@ public sealed class PanelPreview3D : MonoBehaviour
         tileRoot = go.transform;
         tileRoot.SetParent(previewRoot, false);
         PreparePreviewObject(tileRoot.gameObject);
+    }
+
+    private void EnsureRoadRoot()
+    {
+        if (roadRoot != null) return;
+        var go = new GameObject("[PreviewRoadTiles]");
+        roadRoot = go.transform;
+        roadRoot.SetParent(previewRoot, false);
+        PreparePreviewObject(roadRoot.gameObject);
     }
 
     private void EnsureLineRoot()
@@ -1028,7 +1462,7 @@ public sealed class PanelPreview3D : MonoBehaviour
 
     private void EnsurePreviewRoot()
     {
-        bool needDetached = useDetachedPreviewRoot;
+        bool needDetached = useDetachedPreviewRoot || isolatePreviewWorld;
         if (previewRoot != null && previewRoot is RectTransform)
             needDetached = true;
 
@@ -1039,6 +1473,8 @@ public sealed class PanelPreview3D : MonoBehaviour
                 var go = new GameObject("[PanelPreview3D_Root]");
                 _runtimeRoot = go.transform;
             }
+            if (isolatePreviewWorld)
+                _runtimeRoot.position = previewWorldOffset;
             previewRoot = _runtimeRoot;
             return;
         }
@@ -1054,11 +1490,21 @@ public sealed class PanelPreview3D : MonoBehaviour
     private void ApplyPreviewLayerExclusion()
     {
         if (!excludePreviewLayerFromMainCamera) return;
-        if (previewLayer.value == 0) return;
+        LayerMask mask = GetPreviewLayerMask();
+        if (mask.value == 0) return;
 
         Camera cam = Camera.main;
         if (cam == null || cam == previewCamera) return;
-        cam.cullingMask &= ~previewLayer.value;
+        cam.cullingMask &= ~mask.value;
+    }
+
+    private void OnBeginCameraRendering(ScriptableRenderContext context, Camera cam)
+    {
+        if (!excludePreviewLayerFromMainCamera) return;
+        if (cam == null || cam == previewCamera) return;
+        LayerMask mask = GetPreviewLayerMask();
+        if (mask.value == 0) return;
+        cam.cullingMask &= ~mask.value;
     }
 
     private void OnDestroy()
@@ -1131,11 +1577,138 @@ public sealed class PanelPreview3D : MonoBehaviour
 
     private int GetPreviewLayerIndex()
     {
+        EnsurePreviewLayerCache();
+        return _cachedPreviewLayerIndex;
+    }
+
+    private LayerMask GetPreviewLayerMask()
+    {
+        EnsurePreviewLayerCache();
+        return _cachedPreviewLayerMask;
+    }
+
+    private void EnsurePreviewLayerCache()
+    {
+        if (_previewLayerCached) return;
+        _cachedPreviewLayerMask = GetEffectivePreviewLayerMask();
+        _cachedPreviewLayerIndex = GetFirstLayerIndex(_cachedPreviewLayerMask.value);
+        _previewLayerCached = true;
+    }
+
+    private LayerMask GetEffectivePreviewLayerMask()
+    {
+        if (!autoIsolatePreviewLayer) return previewLayer;
+
+        int stashLayer = LayerMask.NameToLayer("Stash");
+        if (stashLayer >= 0 && stashLayer < 32)
+            return 1 << stashLayer;
+
         int mask = previewLayer.value;
+        int worldTowerMask = GetWorldTowerLayerMask();
+
+        if (mask != 0)
+        {
+            int isolatedIndex = GetIsolatedPreviewLayerIndex(mask);
+            if (isolatedIndex >= 1 && (worldTowerMask & (1 << isolatedIndex)) == 0)
+                return 1 << isolatedIndex;
+        }
+
+        int fallback = Mathf.Clamp(fallbackPreviewLayerIndex, 1, 31);
+        if ((worldTowerMask & (1 << fallback)) == 0)
+            return 1 << fallback;
+
+        for (int i = 31; i >= 1; i--)
+        {
+            if ((worldTowerMask & (1 << i)) == 0)
+                return 1 << i;
+        }
+
+        return 1 << fallback;
+    }
+
+    private bool ShouldForceOpaqueBackground()
+    {
+        int stashLayer = LayerMask.NameToLayer("Stash");
+        if (stashLayer < 0 || stashLayer > 31) return false;
+        int mask = GetPreviewLayerMask().value;
+        return (mask & (1 << stashLayer)) != 0;
+    }
+
+    private bool TryGetPreviewBounds(out Bounds bounds)
+    {
+        bounds = new Bounds();
+        if (previewRoot == null) return false;
+
+        var renderers = previewRoot.GetComponentsInChildren<Renderer>(true);
+        if (renderers != null && renderers.Length > 0)
+        {
+            bounds = GetBounds(renderers);
+            return bounds.size.sqrMagnitude > 0.0001f;
+        }
+
+        float totalW = gridWidth * cellWorldWidth;
+        float totalH = gridHeight * cellWorldHeight;
+        Vector3 size = new Vector3(Mathf.Max(0.1f, totalW), 0.1f, Mathf.Max(0.1f, totalH));
+        bounds = new Bounds(previewRoot.position + sceneOffset, size);
+        return true;
+    }
+
+    private static Vector3[] GetBoundsCorners(Bounds b)
+    {
+        Vector3 c = b.center;
+        Vector3 e = b.extents;
+        return new[]
+        {
+            c + new Vector3(-e.x, -e.y, -e.z),
+            c + new Vector3(-e.x, -e.y,  e.z),
+            c + new Vector3(-e.x,  e.y, -e.z),
+            c + new Vector3(-e.x,  e.y,  e.z),
+            c + new Vector3( e.x, -e.y, -e.z),
+            c + new Vector3( e.x, -e.y,  e.z),
+            c + new Vector3( e.x,  e.y, -e.z),
+            c + new Vector3( e.x,  e.y,  e.z),
+        };
+    }
+
+    private void ApplyTargetImageTint(bool useTransparent)
+    {
+        if (targetImage == null || useTransparent) return;
+        Color c = targetImage.color;
+        if (c.a >= 0.999f) return;
+        c.a = 1f;
+        targetImage.color = c;
+    }
+
+    private static int GetIsolatedPreviewLayerIndex(int mask)
+    {
+        for (int i = 31; i >= 1; i--)
+        {
+            if ((mask & (1 << i)) != 0)
+                return i;
+        }
+        return -1;
+    }
+
+    private static int GetFirstLayerIndex(int mask)
+    {
         if (mask == 0) return 0;
         for (int i = 0; i < 32; i++)
             if ((mask & (1 << i)) != 0) return i;
         return 0;
+    }
+
+    private int GetWorldTowerLayerMask()
+    {
+        int mask = 0;
+        var towers = FindObjectsOfType<TowerEntity>(true);
+        for (int i = 0; i < towers.Length; i++)
+        {
+            var tower = towers[i];
+            if (tower == null) continue;
+            if (previewRoot != null && tower.transform.IsChildOf(previewRoot)) continue;
+            mask |= 1 << tower.gameObject.layer;
+        }
+        return mask;
     }
 
     private static void SetLayerRecursive(GameObject go, int layer)
@@ -1143,5 +1716,16 @@ public sealed class PanelPreview3D : MonoBehaviour
         if (go == null) return;
         foreach (var t in go.GetComponentsInChildren<Transform>(true))
             t.gameObject.layer = layer;
+    }
+
+    private static Transform FindChildByName(Transform root, string name)
+    {
+        if (root == null || string.IsNullOrEmpty(name)) return null;
+        foreach (var t in root.GetComponentsInChildren<Transform>(true))
+        {
+            if (t != null && string.Equals(t.name, name, System.StringComparison.OrdinalIgnoreCase))
+                return t;
+        }
+        return null;
     }
 }

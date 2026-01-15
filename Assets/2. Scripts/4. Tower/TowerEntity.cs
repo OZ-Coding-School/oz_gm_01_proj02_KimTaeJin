@@ -47,7 +47,7 @@ public sealed class TowerEntity : MonoBehaviour
     {
         _scope = scope;
         _def = def;
-        _cool = Random.Range(0f, Mathf.Max(0.02f, def.fireInterval));
+        _cool = Random.Range(0f, GetFireInterval());
         _constructed = true;
     }
 
@@ -96,7 +96,7 @@ public sealed class TowerEntity : MonoBehaviour
         }
 
         Fire(target);
-        _cool = Mathf.Max(0.02f, _def.fireInterval);
+        _cool = GetFireInterval();
     }
 
     private EnemyEntity FindTarget()
@@ -210,5 +210,12 @@ public sealed class TowerEntity : MonoBehaviour
             _pitchBaseLocalRot = pitchPivot.localRotation;
             _pitchBaseCached = true;
         }
+    }
+
+    private float GetFireInterval()
+    {
+        float interval = _def != null ? _def.fireInterval : 0.02f;
+        float mul = (_scope != null) ? _scope.TowerAttackSpeedMultiplier : 1f;
+        return Mathf.Max(0.02f, interval / Mathf.Max(0.01f, mul));
     }
 }

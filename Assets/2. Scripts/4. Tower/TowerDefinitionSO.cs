@@ -22,6 +22,9 @@ public sealed class TowerDefinitionSO : ScriptableObject
     [Header("Cost")]
     public int cost = 5;
 
+    [Header("Upgrade")]
+    public TowerDefinitionSO upgradeNext;
+
     [Header("Combat")]
     public float range = 4f;
     public float fireInterval = 0.5f;
