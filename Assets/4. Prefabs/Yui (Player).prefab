@@ -489,9 +489,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _turnSpeed: 720
-  boundary: {fileID: 0}
-  clampToBoundary: 1
-  boundaryRadius: -1
+  playArea: {fileID: 0}
+  clampToRadius: 1
+  softPushSpeed: 6
+  cancelOutwardMove: 1
+  playerRadiusOverride: -1
 --- !u!114 &2325586462301668326
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -553,6 +555,14 @@ MonoBehaviour:
   wiggleAmplitude: 0.25
   wiggleSpeed: 6
   wigglePhase: 0.65
+  autoDeposit: 1
+  autoDepositRange: 5
+  autoDepositMask:
+    serializedVersion: 2
+    m_Bits: 2048
+  autoDepositOrigin: {fileID: 0}
+  autoDepositInterval: 0.2
+  autoDepositTriggerInteraction: 2
   speedForFullWiggle: 6
 --- !u!114 &403605467610091721
 MonoBehaviour:
@@ -570,7 +580,7 @@ MonoBehaviour:
   hitRadius: 6
   harvestMask:
     serializedVersion: 2
-    m_Bits: 512
+    m_Bits: 4608
   attacksPerSecond: 2.5
   harvestDamage: 1
   rotateToTargetSpeed: 18
@@ -591,7 +601,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3cebafed5ee888d4bb57ae34b42e0108, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  boundary: {fileID: 0}
+  playArea: {fileID: 0}
+  radiusPadding: 0
   damagePerSecond: 100
   tickInterval: 0.2
 --- !u!114 &5374172575195753286

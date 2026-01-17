@@ -9,6 +9,7 @@ public sealed class TowerBuildSystem : MonoBehaviour
     private readonly System.Collections.Generic.List<Vector2Int> _cells = new();
     private readonly System.Collections.Generic.List<Vector2Int> _upgradeCells = new();
     private readonly System.Collections.Generic.Dictionary<TowerDefinitionSO, bool> _hasBasePlate = new();
+    private readonly System.Collections.Generic.HashSet<Vector2Int> _roadCells = new();
 
     public void Construct(RunScope scope) => _scope = scope;
 
@@ -37,7 +38,35 @@ public sealed class TowerBuildSystem : MonoBehaviour
         if (TryGetUpgradeableTower(def, cell, out TowerEntity existing))
             return CanUpgradeAtCell(def, existing, cell, out _, out _);
         FootprintMaskUtility.GetFootprintData(def, out FootprintMaskSO mask, out Vector2Int size, out Vector2Int pivot);
-        return BuildGridRules.CanPlaceFootprint(_scope.Grid, mask, size, pivot, cell);
+        RefreshRoadCells();
+        return BuildGridRules.CanPlaceFootprint(_scope.Grid, mask, size, pivot, cell, _roadCells);
+    }
+
+    public bool TryGetUpgradePreview(TowerDefinitionSO def, Vector2Int cell, out TowerDefinitionSO nextDef)
+    {
+        nextDef = null;
+        if (_scope == null || def == null || _scope.Grid == null) return false;
+        if (TryGetUpgradeableTower(def, cell, out TowerEntity existing))
+        {
+            if (CanUpgradeAtCell(def, existing, cell, out TowerDefinitionSO upgradeDef, out _))
+            {
+                nextDef = upgradeDef;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public bool TryGetUpgradePreviewOffset(TowerDefinitionSO def, Vector2Int offset, out TowerDefinitionSO nextDef)
+    {
+        nextDef = null;
+        if (_scope == null || _scope.Grid == null) return false;
+        if (TryGetUpgradeableTowerByOffset(def, offset, out TowerEntity existing))
+            return CanUpgradeAtCell(def, existing, existing.Cell, out nextDef, out _);
+
+        Vector2Int cell = GetAnchorCell() + offset;
+        return TryGetUpgradePreview(def, cell, out nextDef);
     }
 
     public bool CanPlaceOffsetDetailed(TowerDefinitionSO def, Vector2Int offset, out string reason)
@@ -65,6 +94,7 @@ public sealed class TowerBuildSystem : MonoBehaviour
         }
 
         Vector2Int cell = GetAnchorCell() + offset;
+        RefreshRoadCells();
         if (TryGetUpgradeableTower(def, cell, out TowerEntity existing))
         {
             if (CanUpgradeAtCell(def, existing, cell, out _, out string upgradeReason))
@@ -89,13 +119,26 @@ public sealed class TowerBuildSystem : MonoBehaviour
             }
         }
 
-        if (!BuildGridRules.CanPlaceFootprint(_scope.Grid, mask, size, pivot, cell))
+        if (!BuildGridRules.CanPlaceFootprint(_scope.Grid, mask, size, pivot, cell, _roadCells))
         {
             reason = "Not connected to build lines";
             return false;
         }
 
         return true;
+    }
+
+    private void RefreshRoadCells()
+    {
+        _roadCells.Clear();
+        if (_scope == null || _scope.Grid == null) return;
+
+        GridRoadUtility.BuildRoadCells(
+            _scope.Grid,
+            GetAnchorCell(),
+            _scope.BaseFootprintReserver,
+            _scope.Entities != null ? _scope.Entities.Towers : null,
+            _roadCells);
     }
 
     public bool CanPlaceOffset(TowerDefinitionSO def, Vector2Int offset)
@@ -191,9 +234,15 @@ public sealed class TowerBuildSystem : MonoBehaviour
 
     public bool TryPlaceTowerOffset(TowerDefinitionSO def, Vector2Int offset, Quaternion rot)
     {
+        return TryPlaceTowerOffset(def, offset, rot, out _);
+    }
+
+    public bool TryPlaceTowerOffset(TowerDefinitionSO def, Vector2Int offset, Quaternion rot, out TowerEntity tower)
+    {
+        tower = null;
         if (_scope == null || _scope.Grid == null) return false;
         Vector2Int cell = GetAnchorCell() + offset;
-        if (!TryPlaceTower(def, cell, rot, out TowerEntity tower)) return false;
+        if (!TryPlaceTower(def, cell, rot, out tower)) return false;
         if (tower != null) tower.SetOffsetFromCenter(offset);
         return true;
     }
@@ -275,6 +324,34 @@ public sealed class TowerBuildSystem : MonoBehaviour
             if (t.Cell != cell) continue;
             if (t.Definition == null) continue;
             if (!IsSameUpgradeChain(def, t.Definition)) continue;
+            tower = t;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryGetUpgradeableTowerByOffset(TowerDefinitionSO def, Vector2Int offset, out TowerEntity tower)
+    {
+        tower = null;
+        if (_scope == null || _scope.Entities == null || def == null) return false;
+
+        var list = _scope.Entities.Towers;
+        if (list == null) return false;
+
+        Vector2Int anchor = GetAnchorCell();
+
+        for (int i = 0; i < list.Count; i++)
+        {
+            var t = list[i];
+            if (t == null) continue;
+            if (t.Definition == null) continue;
+            if (!IsSameUpgradeChain(def, t.Definition)) continue;
+            if (t.OffsetFromCenter != offset) continue;
+
+            if (offset == Vector2Int.zero && t.Cell != anchor)
+                continue;
+
             tower = t;
             return true;
         }
@@ -383,6 +460,8 @@ public sealed class TowerBuildSystem : MonoBehaviour
         Vector2Int offsetFromCenter = existing != null ? existing.OffsetFromCenter : Vector2Int.zero;
         if (!TryGetPlacementPos(nextDef, cell, out Vector3 pos)) return false;
 
+        if (existing != null)
+            existing.SuppressGridRelease();
         ReleaseTowerCells(existing);
         if (existing != null)
         {

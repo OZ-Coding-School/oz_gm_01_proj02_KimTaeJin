@@ -21,6 +21,7 @@ public sealed class ResourceProgression : MonoBehaviour
     [Header("Stone Skill")]
     [SerializeField] private int stoneLevel = 0;
     [SerializeField] private int stoneStored = 0;
+    [SerializeField] private int stoneCount = 0;
     [SerializeField] private int stonePerLevel = 10;
 
     private RunScope _scope;
@@ -33,18 +34,23 @@ public sealed class ResourceProgression : MonoBehaviour
     public int WoodPerLevel => woodPerLevel;
     public int StoneLevel => stoneLevel;
     public int StoneStored => stoneStored;
+    public int StoneCount => stoneCount;
     public int StonePerLevel => stonePerLevel;
 
     public event Action<int, int, int> BaseExpChanged;
     public event Action<int> BaseLevelUp;
     public event Action<int> WoodLevelUp;
     public event Action<int> StoneLevelUp;
+    public event Action<int, int, int> WoodProgressChanged;
+    public event Action<int, int> StoneCountChanged;
 
     public void Construct(RunScope scope)
     {
         _scope = scope;
         ApplyTowerSpeedBonus();
         RaiseBaseExpChanged();
+        RaiseWoodProgressChanged();
+        RaiseStoneCountChanged();
     }
 
     public void AddResource(ResourceType type, int amount)
@@ -88,7 +94,11 @@ public sealed class ResourceProgression : MonoBehaviour
     {
         if (amount <= 0) return;
         woodStored += amount;
-        if (woodPerLevel <= 0) return;
+        if (woodPerLevel <= 0)
+        {
+            RaiseWoodProgressChanged();
+            return;
+        }
 
         while (woodStored >= woodPerLevel)
         {
@@ -97,13 +107,20 @@ public sealed class ResourceProgression : MonoBehaviour
             ApplyTowerSpeedBonus();
             WoodLevelUp?.Invoke(woodLevel);
         }
+
+        RaiseWoodProgressChanged();
     }
 
     private void AddStone(int amount)
     {
         if (amount <= 0) return;
         stoneStored += amount;
-        if (stonePerLevel <= 0) return;
+        stoneCount += amount;
+        if (stonePerLevel <= 0)
+        {
+            RaiseStoneCountChanged();
+            return;
+        }
 
         while (stoneStored >= stonePerLevel)
         {
@@ -111,6 +128,8 @@ public sealed class ResourceProgression : MonoBehaviour
             stoneLevel += 1;
             StoneLevelUp?.Invoke(stoneLevel);
         }
+
+        RaiseStoneCountChanged();
     }
 
     private void ApplyTowerSpeedBonus()
@@ -123,5 +142,15 @@ public sealed class ResourceProgression : MonoBehaviour
     private void RaiseBaseExpChanged()
     {
         BaseExpChanged?.Invoke(baseLevel, baseExp, baseExpToLevel);
+    }
+
+    private void RaiseWoodProgressChanged()
+    {
+        WoodProgressChanged?.Invoke(woodLevel, woodStored, woodPerLevel);
+    }
+
+    private void RaiseStoneCountChanged()
+    {
+        StoneCountChanged?.Invoke(stoneLevel, stoneCount);
     }
 }

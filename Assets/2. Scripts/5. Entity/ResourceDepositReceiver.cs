@@ -8,6 +8,20 @@ public sealed class ResourceDepositReceiver : MonoBehaviour
     [SerializeField] private ResourceProgression progressionOverride;
     [SerializeField] private bool debugLog = false;
 
+    private static readonly List<ResourceDepositReceiver> _instances = new();
+    public static IReadOnlyList<ResourceDepositReceiver> Instances => _instances;
+
+    private void OnEnable()
+    {
+        if (!_instances.Contains(this))
+            _instances.Add(this);
+    }
+
+    private void OnDisable()
+    {
+        _instances.Remove(this);
+    }
+
     public void Deposit(IReadOnlyList<DropItem> items)
     {
         if (items == null || items.Count == 0) return;

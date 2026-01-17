@@ -9,12 +9,12 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1708036802079000758}
+  - component: {fileID: 3826885529304178877}
   - component: {fileID: 2313708886495430419}
   - component: {fileID: 576186633249453017}
   - component: {fileID: 5444560399544388969}
   - component: {fileID: 694322753443531073}
   - component: {fileID: 3097743298554482413}
-  - component: {fileID: 3826885529304178877}
   m_Layer: 9
   m_Name: CommonTree_2
   m_TagString: Untagged
@@ -37,6 +37,28 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!64 &3826885529304178877
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2089664457239613964}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: -902852668550948457, guid: 47683c1c97a72fc4d8bfca7d45b69185, type: 3}
 --- !u!33 &2313708886495430419
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -140,25 +162,3 @@ MonoBehaviour:
   flashBaseColor: {r: 1, g: 1, b: 1, a: 1}
   useEmission: 1
   emissionIntensity: 1
---- !u!64 &3826885529304178877
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2089664457239613964}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: -902852668550948457, guid: 47683c1c97a72fc4d8bfca7d45b69185, type: 3}

@@ -21,11 +21,19 @@ public sealed class PickupTrain : MonoBehaviour
     [SerializeField] private float wiggleSpeed = 6.0f; 
     [SerializeField] private float wigglePhase = 0.65f;     
 
+    [Header("Auto Deposit")]
+    [SerializeField] private bool autoDeposit = true;
+    [SerializeField] private float autoDepositRange = 3.0f;
+    [SerializeField] private LayerMask autoDepositMask;
+    [SerializeField] private Transform autoDepositOrigin;
+    [SerializeField] private float autoDepositInterval = 0.2f;
+    [SerializeField] private QueryTriggerInteraction autoDepositTriggerInteraction = QueryTriggerInteraction.Ignore;
 
     private readonly List<DropItem> _items = new();
     private readonly List<Vector3> _trail = new(); 
     private Vector3 _lastRecorded;
     private bool _depositing;
+    private float _autoDepositCooldown;
 
     public int Count => _items.Count;
 
@@ -33,6 +41,7 @@ public sealed class PickupTrain : MonoBehaviour
     private Vector3 _prevPos;
     private float _move01;
     private float _wiggleT;
+    private static readonly Collider[] _depositHits = new Collider[16];
 
 
     private void Awake()
@@ -41,11 +50,18 @@ public sealed class PickupTrain : MonoBehaviour
         _trail.Add(transform.position);
         _lastRecorded = transform.position;
         _prevPos = transform.position;
+
+        if (autoDepositMask.value == 0)
+        {
+            int buildingLayer = LayerMask.NameToLayer("Building");
+            autoDepositMask = (buildingLayer >= 0 && buildingLayer < 32) ? (1 << buildingLayer) : ~0;
+        }
     }
 
     private void LateUpdate()
     {
         if (_depositing) return;
+        if (TryAutoDeposit()) return;
         Vector3 dp = transform.position - _prevPos;
         dp.y = 0f;
         float speed = dp.magnitude / Mathf.Max(Time.deltaTime, 0.0001f);
@@ -127,6 +143,76 @@ public sealed class PickupTrain : MonoBehaviour
                 tr.rotation = Quaternion.Slerp(tr.rotation, q, t);
             }
         }
+    }
+
+    private bool TryAutoDeposit()
+    {
+        if (!autoDeposit || autoDepositRange <= 0f) return false;
+        if (_items.Count == 0) return false;
+
+        _autoDepositCooldown -= Time.deltaTime;
+        if (_autoDepositCooldown > 0f) return false;
+        _autoDepositCooldown = Mathf.Max(0.05f, autoDepositInterval);
+
+        Vector3 origin = autoDepositOrigin != null ? autoDepositOrigin.position : transform.position;
+        int mask = autoDepositMask.value != 0 ? autoDepositMask.value : ~0;
+
+        int hitCount = Physics.OverlapSphereNonAlloc(
+            origin,
+            autoDepositRange,
+            _depositHits,
+            mask,
+            autoDepositTriggerInteraction);
+
+        ResourceDepositReceiver best = null;
+        float bestD2 = float.MaxValue;
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            var col = _depositHits[i];
+            if (col == null) continue;
+
+            var receiver = col.GetComponentInParent<ResourceDepositReceiver>();
+            if (receiver == null) continue;
+
+            Vector3 d = receiver.transform.position - origin;
+            d.y = 0f;
+            float d2 = d.sqrMagnitude;
+            if (d2 < bestD2)
+            {
+                bestD2 = d2;
+                best = receiver;
+            }
+        }
+
+        if (best == null)
+        {
+            var receivers = ResourceDepositReceiver.Instances;
+            float range2 = autoDepositRange * autoDepositRange;
+
+            for (int i = 0; i < receivers.Count; i++)
+            {
+                var receiver = receivers[i];
+                if (receiver == null || !receiver.isActiveAndEnabled) continue;
+                if ((mask & (1 << receiver.gameObject.layer)) == 0) continue;
+
+                Vector3 d = receiver.transform.position - origin;
+                d.y = 0f;
+                float d2 = d.sqrMagnitude;
+                if (d2 > range2) continue;
+
+                if (d2 < bestD2)
+                {
+                    bestD2 = d2;
+                    best = receiver;
+                }
+            }
+        }
+
+        if (best == null) return false;
+
+        DepositTo(best.transform);
+        return true;
     }
 
     public void Capture(DropItem item)

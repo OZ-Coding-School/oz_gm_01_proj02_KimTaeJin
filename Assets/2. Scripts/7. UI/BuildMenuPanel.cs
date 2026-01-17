@@ -49,6 +49,7 @@ public sealed class BuildMenuPanel : MonoBehaviour
 
     private bool _placing;
     private TowerDefinitionSO _placingDef;
+    private TowerDefinitionSO _placingPreviewDef;
     private Vector2Int _placingCell;
     private bool _hasPlacementCell;
     private bool _useMouse;
@@ -147,9 +148,7 @@ public sealed class BuildMenuPanel : MonoBehaviour
         if (moved || !_hasPlacementCell)
         {
             _hasPlacementCell = true;
-            GetPlacementClamp(out Vector2Int minCell, out Vector2Int maxCell);
-            cell.x = Mathf.Clamp(cell.x, minCell.x, maxCell.x);
-            cell.y = Mathf.Clamp(cell.y, minCell.y, maxCell.y);
+            ClampPlacementCell(ref cell);
             _placingCell = cell;
         }
 
@@ -160,15 +159,17 @@ public sealed class BuildMenuPanel : MonoBehaviour
             Vector2Int offset = GetOffsetFromCenter(cell);
             if (_scope.TowerBuild.CanPlaceOffset(_placingDef, offset))
             {
-                bool placed = _scope.TowerBuild.TryPlaceTowerOffset(_placingDef, offset, Quaternion.identity);
+                bool placed = _scope.TowerBuild.TryPlaceTowerOffset(_placingDef, offset, Quaternion.identity, out TowerEntity placedTower);
                 if (placed)
                 {
-                    TowerEntity placedTower = FindPlacedTower(_placingDef, offset, cell);
                     _pendingClose = true;
                     if (preview3D != null)
                     {
                         preview3D.SetPlacementTint(canPlaceColor);
-                        FootprintMaskUtility.GetFootprintData(_placingDef, out _, out Vector2Int size, out Vector2Int pivot);
+                        TowerDefinitionSO commitDef = placedTower != null && placedTower.Definition != null
+                            ? placedTower.Definition
+                            : (_placingPreviewDef ?? _placingDef);
+                        FootprintMaskUtility.GetFootprintData(commitDef, out _, out Vector2Int size, out Vector2Int pivot);
                         if (!preview3D.TryCommitPlacementPreview(placedTower, cell, size, pivot))
                         {
                             preview3D.SetPlacementActive(false);
@@ -428,14 +429,12 @@ public sealed class BuildMenuPanel : MonoBehaviour
 
         _placing = true;
         _placingDef = clicked.Tower;
+        _placingPreviewDef = null;
         _hasPlacementCell = false;
 
         SetButtonsForPlacement(clicked);
 
         if (preview3D == null) return;
-        FootprintMaskUtility.GetFootprintData(_placingDef, out FootprintMaskSO mask, out Vector2Int size, out Vector2Int pivot);
-        preview3D.SetPlacementFootprint(mask, size, pivot);
-        preview3D.SetPlacementPrefab(_placingDef.prefab != null ? _placingDef.prefab.gameObject : null);
         preview3D.SetPlacementActive(true);
 
         UpdatePlacementPreview(GetDefaultPlacementCell());
@@ -444,9 +443,7 @@ public sealed class BuildMenuPanel : MonoBehaviour
     private Vector2Int GetDefaultPlacementCell()
     {
         Vector2Int cell = GetCenterCell();
-        GetPlacementClamp(out Vector2Int minCell, out Vector2Int maxCell);
-        cell.x = Mathf.Clamp(cell.x, minCell.x, maxCell.x);
-        cell.y = Mathf.Clamp(cell.y, minCell.y, maxCell.y);
+        ClampPlacementCell(ref cell);
         return cell;
     }
 
@@ -488,8 +485,109 @@ public sealed class BuildMenuPanel : MonoBehaviour
         bool can = _scope.TowerBuild != null && _scope.TowerBuild.CanPlaceOffset(_placingDef, offset);
 
         if (preview3D == null) return;
+        EnsurePlacementPreviewDef(cell);
+        preview3D.SetPlacementCanPlace(can);
         preview3D.SetPlacementCell(cell, !_useMouse);
         preview3D.SetPlacementTint(can ? canPlaceColor : cannotPlaceColor);
+    }
+
+    private void EnsurePlacementPreviewDef(Vector2Int cell)
+    {
+        if (preview3D == null) return;
+
+        TowerDefinitionSO previewDef = ResolvePlacementPreviewDef(cell);
+        if (previewDef == _placingPreviewDef) return;
+
+        _placingPreviewDef = previewDef;
+        if (_placingPreviewDef == null)
+        {
+            preview3D.ClearPlacementPreview();
+            return;
+        }
+
+        if (Debug.isDebugBuild)
+        {
+            Vector2Int offset = GetOffsetFromCenter(cell);
+            string baseId = _placingDef != null ? _placingDef.id : "null";
+            string previewId = _placingPreviewDef != null ? _placingPreviewDef.id : "null";
+            Debug.Log($"[BuildMenuPanel] PreviewDef changed base={baseId} preview={previewId} cell={cell} offset={offset}");
+        }
+
+        FootprintMaskUtility.GetFootprintData(_placingPreviewDef, out FootprintMaskSO mask, out Vector2Int size, out Vector2Int pivot);
+        preview3D.SetPlacementFootprint(mask, size, pivot);
+        preview3D.SetPlacementPrefab(_placingPreviewDef.prefab != null ? _placingPreviewDef.prefab.gameObject : null);
+        preview3D.SetPlacementActive(true);
+    }
+
+    private TowerDefinitionSO ResolvePlacementPreviewDef(Vector2Int cell)
+    {
+        if (_placingDef == null || _scope == null || _scope.TowerBuild == null) return _placingDef;
+        Vector2Int offset = GetOffsetFromCenter(cell);
+        if (_scope.TowerBuild.TryGetUpgradePreviewOffset(_placingDef, offset, out TowerDefinitionSO nextDef))
+            return nextDef;
+        if (preview3D != null && preview3D.TryGetPlacedTowerAtCell(cell, out TowerEntity placed))
+        {
+            if (placed != null && IsSameUpgradeChain(_placingDef, placed.Definition))
+            {
+                TowerDefinitionSO upgrade = placed.Definition != null ? placed.Definition.upgradeNext : null;
+                if (upgrade != null && upgrade.prefab != null)
+                    return upgrade;
+            }
+        }
+        if (TryGetUpgradeableTowerAtOffset(_placingDef, offset, out TowerEntity existing))
+        {
+            TowerDefinitionSO upgrade = existing.Definition != null ? existing.Definition.upgradeNext : null;
+            if (upgrade != null && upgrade.prefab != null)
+                return upgrade;
+        }
+        return _placingDef;
+    }
+
+    private bool TryGetUpgradeableTowerAtOffset(TowerDefinitionSO def, Vector2Int offset, out TowerEntity tower)
+    {
+        tower = null;
+        if (def == null || _scope?.Entities == null) return false;
+        var list = _scope.Entities.Towers;
+        if (list == null || list.Count == 0) return false;
+
+        Vector2Int cell = GetCenterCell() + offset;
+
+        for (int i = 0; i < list.Count; i++)
+        {
+            var t = list[i];
+            if (t == null) continue;
+            if (t.Definition == null) continue;
+            if (!IsSameUpgradeChain(def, t.Definition)) continue;
+            if (t.OffsetFromCenter == offset)
+            {
+                if (offset == Vector2Int.zero && t.Cell != GetCenterCell())
+                    continue;
+                tower = t;
+                return true;
+            }
+            if (t.Cell != cell) continue;
+            tower = t;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsSameUpgradeChain(TowerDefinitionSO a, TowerDefinitionSO b)
+    {
+        if (a == null || b == null) return false;
+        if (IsUpgradeChainMatch(a, b)) return true;
+        return IsUpgradeChainMatch(b, a);
+    }
+
+    private static bool IsUpgradeChainMatch(TowerDefinitionSO root, TowerDefinitionSO target)
+    {
+        if (root == null || target == null) return false;
+        for (TowerDefinitionSO cur = root; cur != null; cur = cur.upgradeNext)
+        {
+            if (cur == target) return true;
+        }
+        return false;
     }
 
     private bool TryGetMouseCell(out Vector2Int cell)
@@ -536,11 +634,11 @@ public sealed class BuildMenuPanel : MonoBehaviour
         return Vector2Int.zero;
     }
 
-    private void GetPlacementClamp(out Vector2Int minCell, out Vector2Int maxCell)
+    private void GetPlacementClamp(TowerDefinitionSO def, out Vector2Int minCell, out Vector2Int maxCell)
     {
         int w = GetGridWidth();
         int h = GetGridHeight();
-        FootprintMaskUtility.GetFootprintData(_placingDef, out _, out Vector2Int size, out Vector2Int pivot);
+        FootprintMaskUtility.GetFootprintData(def, out _, out Vector2Int size, out Vector2Int pivot);
         size.x = Mathf.Max(1, size.x);
         size.y = Mathf.Max(1, size.y);
         pivot.x = Mathf.Clamp(pivot.x, 0, size.x - 1);
@@ -552,20 +650,30 @@ public sealed class BuildMenuPanel : MonoBehaviour
             Mathf.Max(minCell.y, h - size.y + pivot.y));
     }
 
-    private void RefreshGridTiles()
+    private void ClampPlacementCell(ref Vector2Int cell)
     {
-        if (preview3D == null || _scope == null || _scope.Grid == null) return;
-        int w = _scope.Grid.Width;
-        int h = _scope.Grid.Height;
+        TowerDefinitionSO clampDef = ResolvePlacementPreviewDef(cell);
+        if (clampDef == null) clampDef = _placingDef;
+        if (clampDef == null)
+        {
+            cell = Vector2Int.zero;
+            return;
+        }
 
-        if (!EnsureGridMasks(w, h)) return;
+        GetPlacementClamp(clampDef, out Vector2Int minCell, out Vector2Int maxCell);
+        cell.x = Mathf.Clamp(cell.x, minCell.x, maxCell.x);
+        cell.y = Mathf.Clamp(cell.y, minCell.y, maxCell.y);
 
-        BuildGridRules.ComputeBuildable(_scope.Grid, _buildableMask, _occupiedMask);
-        preview3D.SetTileStates(_buildableMask, _occupiedMask);
-        RefreshRoadTiles();
+        TowerDefinitionSO afterClamp = ResolvePlacementPreviewDef(cell);
+        if (afterClamp != null && afterClamp != clampDef)
+        {
+            GetPlacementClamp(afterClamp, out minCell, out maxCell);
+            cell.x = Mathf.Clamp(cell.x, minCell.x, maxCell.x);
+            cell.y = Mathf.Clamp(cell.y, minCell.y, maxCell.y);
+        }
     }
 
-    private void RefreshRoadTiles()
+    private void RefreshGridTiles()
     {
         if (preview3D == null) return;
         if (_scope == null || _scope.Grid == null)
@@ -573,6 +681,11 @@ public sealed class BuildMenuPanel : MonoBehaviour
             preview3D.ClearRoadTiles();
             return;
         }
+
+        int w = _scope.Grid.Width;
+        int h = _scope.Grid.Height;
+
+        if (!EnsureGridMasks(w, h)) return;
 
         _roadCells.Clear();
         GridRoadUtility.BuildRoadCells(
@@ -582,6 +695,19 @@ public sealed class BuildMenuPanel : MonoBehaviour
             _scope.Entities != null ? _scope.Entities.Towers : null,
             _roadCells);
 
+        BuildGridRules.ComputeBuildable(_scope.Grid, _buildableMask, _occupiedMask, _roadCells);
+        preview3D.SetTileStates(_buildableMask, _occupiedMask);
+        RefreshRoadTiles();
+    }
+
+    private void RefreshRoadTiles()
+    {
+        if (preview3D == null) return;
+        if (_roadCells == null || _roadCells.Count == 0)
+        {
+            preview3D.ClearRoadTiles();
+            return;
+        }
         preview3D.SetRoadCells(_roadCells);
     }
 
@@ -598,6 +724,7 @@ public sealed class BuildMenuPanel : MonoBehaviour
     {
         _placing = false;
         _placingDef = null;
+        _placingPreviewDef = null;
         _hasPlacementCell = false;
         _pendingClose = false;
         StopCloseDelay();

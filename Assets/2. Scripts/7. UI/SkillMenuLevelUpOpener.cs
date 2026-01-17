@@ -4,6 +4,7 @@ using UnityEngine;
 public sealed class SkillMenuLevelUpOpener : MonoBehaviour
 {
     [SerializeField] private GameObject skillMenuRoot;
+    [SerializeField] private bool forceCloseOnBind = true;
 
     private RunScope _scope;
     private ResourceProgression _progression;
@@ -11,6 +12,7 @@ public sealed class SkillMenuLevelUpOpener : MonoBehaviour
     private void OnEnable()
     {
         RunScopeLocator.Changed += OnScopeChanged;
+        ForceCloseMenu();
         TryBind();
     }
 
@@ -32,6 +34,8 @@ public sealed class SkillMenuLevelUpOpener : MonoBehaviour
         _scope = RunScopeLocator.Current;
         if (_scope == null) return;
 
+        ForceCloseMenu();
+
         _progression = _scope.Progression;
         if (_progression != null)
             _progression.StoneLevelUp += OnStoneLevelUp;
@@ -51,5 +55,14 @@ public sealed class SkillMenuLevelUpOpener : MonoBehaviour
         if (skillMenuRoot == null) return;
         if (!skillMenuRoot.activeSelf)
             skillMenuRoot.SetActive(true);
+    }
+
+    private void ForceCloseMenu()
+    {
+        if (!forceCloseOnBind) return;
+        if (skillMenuRoot == null) return;
+        if (skillMenuRoot == gameObject) return;
+        if (skillMenuRoot.activeSelf)
+            skillMenuRoot.SetActive(false);
     }
 }

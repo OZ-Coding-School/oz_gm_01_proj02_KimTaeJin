@@ -20,6 +20,7 @@ public sealed class TowerEntity : MonoBehaviour
     private bool _pivotsResolved;
     private bool _pitchBaseCached;
     private Quaternion _pitchBaseLocalRot = Quaternion.identity;
+    private bool _suppressGridRelease;
 
     public Vector2Int Cell { get; private set; }
     public Vector2Int OffsetFromCenter { get; private set; }
@@ -31,6 +32,11 @@ public sealed class TowerEntity : MonoBehaviour
     public void SetFootprint(Vector2Int footprint)
     {
         Footprint = new Vector2Int(Mathf.Max(1, footprint.x), Mathf.Max(1, footprint.y));
+    }
+
+    public void SuppressGridRelease()
+    {
+        _suppressGridRelease = true;
     }
 
     public void SetOccupiedCells(System.Collections.Generic.List<Vector2Int> cells)
@@ -173,7 +179,7 @@ public sealed class TowerEntity : MonoBehaviour
         if (_scope != null)
         {
             _scope.Entities?.UnregisterTower(this);
-            if (_scope.Grid != null)
+            if (_scope.Grid != null && !_suppressGridRelease)
             {
                 if (_occupiedCells != null && _occupiedCells.Length > 0)
                 {

@@ -5,6 +5,11 @@ public static class BuildGridRules
 {
     public static void ComputeBuildable(GridSystem grid, bool[,] buildable, bool[,] occupied)
     {
+        ComputeBuildable(grid, buildable, occupied, null);
+    }
+
+    public static void ComputeBuildable(GridSystem grid, bool[,] buildable, bool[,] occupied, HashSet<Vector2Int> extraOccupied)
+    {
         if (grid == null) return;
         int w = grid.Width;
         int h = grid.Height;
@@ -23,8 +28,9 @@ public static class BuildGridRules
             {
                 Vector2Int cell = new Vector2Int(x, y);
                 bool occ = grid.IsOccupied(cell);
+                bool extra = extraOccupied != null && extraOccupied.Contains(cell);
                 if (occupied != null) occupied[x, y] = occ;
-                if (occ)
+                if (occ || extra)
                 {
                     rowHas[y] = true;
                     colHas[x] = true;
@@ -47,6 +53,12 @@ public static class BuildGridRules
 
     public static bool CanPlaceFootprint(GridSystem grid, FootprintMaskSO mask, Vector2Int size, Vector2Int pivot, Vector2Int anchor)
     {
+        return CanPlaceFootprint(grid, mask, size, pivot, anchor, null);
+    }
+
+    public static bool CanPlaceFootprint(GridSystem grid, FootprintMaskSO mask, Vector2Int size, Vector2Int pivot, Vector2Int anchor,
+        HashSet<Vector2Int> extraOccupied)
+    {
         if (grid == null) return false;
         int w = grid.Width;
         int h = grid.Height;
@@ -58,7 +70,10 @@ public static class BuildGridRules
         {
             for (int x = 0; x < w; x++)
             {
-                if (!grid.IsOccupied(new Vector2Int(x, y))) continue;
+                Vector2Int cell = new Vector2Int(x, y);
+                bool occ = grid.IsOccupied(cell);
+                bool extra = extraOccupied != null && extraOccupied.Contains(cell);
+                if (!occ && !extra) continue;
                 rowHas[y] = true;
                 colHas[x] = true;
             }
@@ -76,4 +91,5 @@ public static class BuildGridRules
         }
         return true;
     }
+
 }
