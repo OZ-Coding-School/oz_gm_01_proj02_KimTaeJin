@@ -109,7 +109,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 88953d9def154964c9cd9f15fd89d806, type: 3}
   m_Name: PlayAreaFogFeature
   m_EditorClassIdentifier: 
-  m_Active: 1
+  m_Active: 0
   settings:
     passEvent: 500
     material: {fileID: 2100000, guid: 9bc67e978129ad54ca406697d5751ec9, type: 2}

@@ -58,7 +58,10 @@ public sealed class PlacementSystem : MonoBehaviour
 
         if (!TryGetMouseGroundPoint(out Vector3 p)) return;
 
-        Vector2Int cell = _scope.Grid.WorldToCell(p);
+        Grid grid = _scope.GridData != null ? _scope.GridData.WorldGrid : null;
+        if (grid == null) return;
+        Vector3Int cell3 = grid.WorldToCell(p);
+        Vector2Int cell = new Vector2Int(cell3.x, cell3.z);
 
         if (_scope.TowerBuild.TryGetPlacementPos(_selected, cell, out Vector3 placePos))
         {

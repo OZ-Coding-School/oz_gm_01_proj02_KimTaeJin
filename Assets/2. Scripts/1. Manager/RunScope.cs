@@ -12,6 +12,7 @@ public sealed class RunScope : MonoBehaviour
     public ResourceProgression Progression { get; private set; }
 
     public GridSystem Grid { get; private set; }
+    public GridDataService GridData { get; private set; }
     public TowerBuildSystem TowerBuild { get; private set; }
     public PlacementSystem Placement { get; private set; }
     public BaseFootprintReserver BaseFootprintReserver { get; private set; }
@@ -22,6 +23,7 @@ public sealed class RunScope : MonoBehaviour
 
     [Header("Required")]
     [SerializeField] private GridSystem grid;
+    [SerializeField] private GridDataService gridData;
     [SerializeField] private GridVisualizer gridVisualizer;
     [SerializeField] private TowerBuildSystem towerBuild;
 
@@ -50,11 +52,14 @@ public sealed class RunScope : MonoBehaviour
         Events = new RunEventBus();
 
         grid = grid != null ? grid : GetComponent<GridSystem>();
+        gridData = gridData != null ? gridData : GetComponent<GridDataService>();
         gridVisualizer = gridVisualizer != null ? gridVisualizer : GetComponent<GridVisualizer>();
         towerBuild = towerBuild != null ? towerBuild : GetComponent<TowerBuildSystem>();
 
         if (grid == null)
             Debug.LogError("[RunScope] GridSystem is missing.");
+        if (gridData == null)
+            Debug.LogError("[RunScope] GridDataService is missing.");
         if (gridVisualizer == null)
             Debug.LogError("[RunScope] GridVisualizer is missing.");
         if (towerBuild == null)
@@ -70,6 +75,7 @@ public sealed class RunScope : MonoBehaviour
         spawner = spawner != null ? spawner : GetComponent<EnemySpawnSystem>();
 
         Grid = grid;
+        GridData = gridData;
         TowerBuild = towerBuild;
         Placement = placement;
         BaseFootprintReserver = baseFootprintReserver;
@@ -97,6 +103,7 @@ public sealed class RunScope : MonoBehaviour
         Grid?.ClearAll();
         EnsureGridRoadSystem();
 
+        gridData?.Construct(this);
         buildMode?.Construct(this);
         buildModePause?.Construct(this);
         gridVisualizer?.Construct(this);

@@ -1,6 +1,9 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public sealed class PanelGridView : MonoBehaviour
 {
@@ -15,11 +18,15 @@ public sealed class PanelGridView : MonoBehaviour
 
     [Header("Lines (Optional)")]
     [SerializeField] private Image linePrefab;
+    [SerializeField] private RectTransform lineRoot;
     [SerializeField] private float lineThickness = 2f;
     [SerializeField] private Color lineColor = new Color(1f, 1f, 1f, 0.75f);
 
     private readonly List<RectTransform> _lines = new();
     public event System.Action<PanelGridView> GridChanged;
+#if UNITY_EDITOR
+    private bool _editorRebuildQueued;
+#endif
 
     public int Width => width;
     public int Height => height;
@@ -59,8 +66,7 @@ public sealed class PanelGridView : MonoBehaviour
             gridRoot.sizeDelta = new Vector2(width * cellWidth, height * cellHeight);
         }
 
-        RebuildLines();
-        NotifyChanged();
+        QueueEditorRebuild();
     }
 #endif
 
@@ -68,17 +74,23 @@ public sealed class PanelGridView : MonoBehaviour
     {
         if (!autoFitCellSizeFromRect) return;
         UpdateCellSizeFromRect();
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+        {
+            QueueEditorRebuild();
+            return;
+        }
+#endif
         RebuildLines();
         NotifyChanged();
     }
 
     public void RebuildLines()
     {
-        if (linePrefab == null || gridRoot == null) return;
-
-        for (int i = 0; i < _lines.Count; i++)
-            if (_lines[i] != null) Destroy(_lines[i].gameObject);
-        _lines.Clear();
+        if (gridRoot == null) return;
+        EnsureLineRoot();
+        ClearLines();
+        if (linePrefab == null || lineRoot == null) return;
 
         float totalW = width * cellWidth;
         float totalH = height * cellHeight;
@@ -87,7 +99,7 @@ public sealed class PanelGridView : MonoBehaviour
 
         for (int i = 0; i <= width; i++)
         {
-            var line = Instantiate(linePrefab, gridRoot);
+            var line = Instantiate(linePrefab, lineRoot);
             line.name = $"V{i}";
             var rt = line.rectTransform;
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
@@ -99,7 +111,7 @@ public sealed class PanelGridView : MonoBehaviour
 
         for (int j = 0; j <= height; j++)
         {
-            var line = Instantiate(linePrefab, gridRoot);
+            var line = Instantiate(linePrefab, lineRoot);
             line.name = $"H{j}";
             var rt = line.rectTransform;
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
@@ -108,6 +120,67 @@ public sealed class PanelGridView : MonoBehaviour
             line.color = lineColor;
             _lines.Add(rt);
         }
+    }
+
+    private void EnsureLineRoot()
+    {
+        if (lineRoot != null) return;
+        Transform found = gridRoot.Find("GridLines");
+        if (found != null)
+        {
+            lineRoot = found as RectTransform;
+            if (lineRoot != null) return;
+        }
+
+        var go = new GameObject("GridLines", typeof(RectTransform));
+        lineRoot = go.GetComponent<RectTransform>();
+        lineRoot.SetParent(gridRoot, false);
+        lineRoot.anchorMin = Vector2.zero;
+        lineRoot.anchorMax = Vector2.one;
+        lineRoot.anchoredPosition = Vector2.zero;
+        lineRoot.sizeDelta = Vector2.zero;
+    }
+
+#if UNITY_EDITOR
+    private void QueueEditorRebuild()
+    {
+        if (_editorRebuildQueued) return;
+        _editorRebuildQueued = true;
+        EditorApplication.delayCall += () =>
+        {
+            _editorRebuildQueued = false;
+            if (this == null) return;
+            if (Application.isPlaying) return;
+            RebuildLines();
+            NotifyChanged();
+        };
+    }
+#endif
+
+    private void ClearLines()
+    {
+        if (lineRoot != null)
+        {
+            for (int i = lineRoot.childCount - 1; i >= 0; i--)
+            {
+                Transform child = lineRoot.GetChild(i);
+                if (child == null) continue;
+                if (Application.isPlaying)
+                    Destroy(child.gameObject);
+                else
+                    DestroyImmediate(child.gameObject);
+            }
+        }
+
+        for (int i = 0; i < _lines.Count; i++)
+        {
+            if (_lines[i] == null) continue;
+            if (Application.isPlaying)
+                Destroy(_lines[i].gameObject);
+            else
+                DestroyImmediate(_lines[i].gameObject);
+        }
+        _lines.Clear();
     }
 
     public void Refresh()

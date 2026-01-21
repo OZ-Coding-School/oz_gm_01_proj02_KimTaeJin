@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
@@ -17,7 +17,7 @@ public sealed class BuildMenuPanel : MonoBehaviour
 
     [Header("Grid View")]
     [SerializeField] private PanelGridView gridView;
-    [SerializeField] private PanelPreview3D preview3D;
+    [SerializeField] private TowerPlacementController placementController;
 
     [Header("Options (3)")]
     [SerializeField] private TowerBuildButton[] optionButtons;
@@ -35,33 +35,21 @@ public sealed class BuildMenuPanel : MonoBehaviour
     [SerializeField] private bool allowDuplicates = false;
     [SerializeField] private int rerollCost = 2;
 
-    [Header("Placement Preview")]
-    [SerializeField] private Canvas placementCanvas;
-    [SerializeField] private Color canPlaceColor = new Color(0.2f, 1f, 0.2f, 0.8f);
-    [SerializeField] private Color cannotPlaceColor = new Color(1f, 0.2f, 0.2f, 0.8f);
+    [Header("Placement")]
     [SerializeField] private KeyCode confirmKey = KeyCode.Return;
-    [SerializeField] private KeyCode cancelKey = KeyCode.Escape;
     [SerializeField] private float exitDelayAfterPlace = 1f;
 
     private RunScope _scope;
+    private GridDataService _gridData;
     private readonly List<TowerDefinitionSO> _draft = new();
     private bool _economyBound;
 
     private bool _placing;
-    private TowerDefinitionSO _placingDef;
-    private TowerDefinitionSO _placingPreviewDef;
-    private Vector2Int _placingCell;
-    private bool _hasPlacementCell;
-    private bool _useMouse;
-    private Vector2 _lastMousePos;
     private int _selectedIndex = -1;
     private bool _pendingClose;
     private Coroutine _closeRoutine;
     private Tween _panelFade;
     private Tween _dimFade;
-    private bool[,] _buildableMask;
-    private bool[,] _occupiedMask;
-    private readonly HashSet<Vector2Int> _roadCells = new();
 
     public bool IsOpen => root != null && root.activeInHierarchy;
 
@@ -69,13 +57,17 @@ public sealed class BuildMenuPanel : MonoBehaviour
     {
         if (root == null) root = gameObject;
         if (gridView == null) gridView = GetComponentInChildren<PanelGridView>(true);
-        if (preview3D == null) preview3D = GetComponentInChildren<PanelPreview3D>(true);
-        if (gridView != null)
-            gridView.GridChanged += OnGridChanged;
+        if (placementController == null) placementController = FindObjectOfType<TowerPlacementController>(true);
 
         if (rerollButton != null) rerollButton.onClick.AddListener(OnRerollClicked);
         if (closeButton != null) closeButton.onClick.AddListener(ExitBuildMode);
         if (rerollCostText != null) rerollCostText.text = rerollCost.ToString();
+
+        if (placementController != null)
+        {
+            placementController.OnPlacementConfirmed += HandlePlacementConfirmed;
+            placementController.OnPlacementCanceled += HandlePlacementCanceled;
+        }
 
         if (optionButtons != null)
         {
@@ -92,114 +84,30 @@ public sealed class BuildMenuPanel : MonoBehaviour
             }
         }
 
-        if (placementCanvas == null)
-            placementCanvas = GetComponentInParent<Canvas>();
-
         root.SetActive(false);
     }
 
     private void OnDestroy()
     {
-        if (gridView != null)
-            gridView.GridChanged -= OnGridChanged;
+        if (placementController != null)
+        {
+            placementController.OnPlacementConfirmed -= HandlePlacementConfirmed;
+            placementController.OnPlacementCanceled -= HandlePlacementCanceled;
+        }
     }
 
     private void Update()
     {
         if (_pendingClose) return;
-        if (!_placing)
-        {
-            HandleOptionNavigation();
-            return;
-        }
-
-        if (_scope == null || _scope.TowerBuild == null) return;
-
-        if (Input.GetKeyDown(cancelKey) || Input.GetMouseButtonDown(1))
-        {
-            CancelPlacement();
-            return;
-        }
-
-        Vector2Int cell = _placingCell;
-        bool moved = false;
-        bool usedKeyboard = false;
-
-        if (Input.GetKeyDown(KeyCode.W)) { cell += new Vector2Int(0, 1); moved = true; }
-        if (Input.GetKeyDown(KeyCode.S)) { cell += new Vector2Int(0, -1); moved = true; }
-        if (Input.GetKeyDown(KeyCode.A)) { cell += new Vector2Int(-1, 0); moved = true; }
-        if (Input.GetKeyDown(KeyCode.D)) { cell += new Vector2Int(1, 0); moved = true; }
-        if (moved) usedKeyboard = true;
-
-        Vector2 mousePos = Input.mousePosition;
-        if ((mousePos - _lastMousePos).sqrMagnitude > 1f)
-        {
-            _useMouse = true;
-            _lastMousePos = mousePos;
-        }
-        if (usedKeyboard) _useMouse = false;
-
-        if (_useMouse && TryGetMouseCell(out Vector2Int mouseCell))
-        {
-            cell = mouseCell;
-            moved = true;
-        }
-
-        if (moved || !_hasPlacementCell)
-        {
-            _hasPlacementCell = true;
-            ClampPlacementCell(ref cell);
-            _placingCell = cell;
-        }
-
-        UpdatePlacementPreview(cell);
-
-        if (Input.GetKeyDown(confirmKey))
-        {
-            Vector2Int offset = GetOffsetFromCenter(cell);
-            if (_scope.TowerBuild.CanPlaceOffset(_placingDef, offset))
-            {
-                bool placed = _scope.TowerBuild.TryPlaceTowerOffset(_placingDef, offset, Quaternion.identity, out TowerEntity placedTower);
-                if (placed)
-                {
-                    _pendingClose = true;
-                    if (preview3D != null)
-                    {
-                        preview3D.SetPlacementTint(canPlaceColor);
-                        TowerDefinitionSO commitDef = placedTower != null && placedTower.Definition != null
-                            ? placedTower.Definition
-                            : (_placingPreviewDef ?? _placingDef);
-                        FootprintMaskUtility.GetFootprintData(commitDef, out _, out Vector2Int size, out Vector2Int pivot);
-                        if (!preview3D.TryCommitPlacementPreview(placedTower, cell, size, pivot))
-                        {
-                            preview3D.SetPlacementActive(false);
-                            preview3D.ClearPlacementPreview();
-                        }
-                        RefreshGridTiles();
-                    }
-                    StartCloseDelay();
-                }
-            }
-            else
-            {
-                if (_scope.TowerBuild.CanPlaceOffsetDetailed(_placingDef, offset, out string reason))
-                    reason = "Unknown";
-                Vector2Int center = GetCenterCell();
-                Debug.LogWarning($"[BuildMenuPanel] Cannot place. offset={offset} center={center} reason={reason}");
-            }
-        }
+        if (_placing) return;
+        HandleOptionNavigation();
     }
 
     private void TryBindScope()
     {
         if (_scope != null) return;
         _scope = RunScopeLocator.Current;
-    }
-
-    private void OnGridChanged(PanelGridView grid)
-    {
-        if (preview3D == null || grid == null) return;
-        preview3D.SyncFromGridView(grid);
+        _gridData = _scope != null ? _scope.GridData : null;
     }
 
     public void Open()
@@ -213,33 +121,14 @@ public sealed class BuildMenuPanel : MonoBehaviour
 
         _scope.Events.PushBuildMode(this);
 
-        if (preview3D != null)
-        {
-            if (gridView != null)
-                gridView.Refresh();
-            preview3D.SetGridSystem(_scope.Grid);
-            preview3D.SyncFromGridView(gridView);
-            var baseReserver = _scope.BaseFootprintReserver != null
-                ? _scope.BaseFootprintReserver
-                : _scope.GetComponent<BaseFootprintReserver>();
-            if (baseReserver != null && baseReserver.UseFixedFootprint)
-            {
-                if (baseReserver.UseFootprintMask && baseReserver.FixedFootprintMask != null)
-                    preview3D.SetCenterFootprint(baseReserver.FixedFootprintMask, baseReserver.EvenFootprintBiasPositive);
-                else
-                    preview3D.SetCenterFootprint(baseReserver.FixedFootprintSize, baseReserver.EvenFootprintBiasPositive);
-            }
-            preview3D.SyncPlacedTowers(_scope.Entities != null ? _scope.Entities.Towers : null);
-            RefreshGridTiles();
-        }
+        if (gridView != null)
+            gridView.Refresh();
+        _gridData?.RequestGridReset();
 
         BindEconomy();
         Draft();
         ClearSelection();
         EnsureDefaultSelection();
-
-        if (preview3D != null)
-            preview3D.ShowCenter();
     }
 
     private void ClosePanelOnly()
@@ -249,11 +138,6 @@ public sealed class BuildMenuPanel : MonoBehaviour
         StopCloseDelay();
         ShowPanel(false);
         UnbindEconomy();
-        if (preview3D != null)
-        {
-            preview3D.ClearRoadTiles();
-            preview3D.ClearPlacedTowers();
-        }
     }
 
     public void ExitBuildMode()
@@ -426,322 +310,49 @@ public sealed class BuildMenuPanel : MonoBehaviour
         TryBindScope();
         if (_scope == null) return;
         if (clicked == null || clicked.Tower == null) return;
+        if (placementController == null) return;
 
         _placing = true;
-        _placingDef = clicked.Tower;
-        _placingPreviewDef = null;
-        _hasPlacementCell = false;
+        TowerDefinitionSO def = clicked.Tower;
+        _pendingClose = false;
+        StopCloseDelay();
 
         SetButtonsForPlacement(clicked);
-
-        if (preview3D == null) return;
-        preview3D.SetPlacementActive(true);
-
-        UpdatePlacementPreview(GetDefaultPlacementCell());
+        placementController.BeginPlacement(def);
     }
 
-    private Vector2Int GetDefaultPlacementCell()
+    private void HandlePlacementConfirmed(bool ok)
     {
-        Vector2Int cell = GetCenterCell();
-        ClampPlacementCell(ref cell);
-        return cell;
+        if (!ok) return;
+        _pendingClose = true;
+        placementController?.CancelPlacement();
+        StartCloseDelay(exitDelayAfterPlace);
     }
 
-    private Vector2Int GetOffsetFromCenter(Vector2Int cell)
+    private void HandlePlacementCanceled()
     {
-        return cell - GetCenterCell();
-    }
-
-    private TowerEntity FindPlacedTower(TowerDefinitionSO def, Vector2Int offset, Vector2Int cell)
-    {
-        if (def == null || _scope?.Entities == null) return null;
-        var list = _scope.Entities.Towers;
-        if (list == null || list.Count == 0) return null;
-
-        for (int i = list.Count - 1; i >= 0; i--)
-        {
-            var t = list[i];
-            if (t == null) continue;
-            if (t.Definition != def) continue;
-            if (t.OffsetFromCenter != offset) continue;
-            if (t.Cell != cell) continue;
-            return t;
-        }
-
-        return null;
-    }
-
-    private void UpdatePlacementPreview(Vector2Int cell)
-    {
-        if (!_hasPlacementCell)
-        {
-            _placingCell = cell;
-            _hasPlacementCell = true;
-        }
-
-        if (gridView == null) return;
-
-        Vector2Int offset = GetOffsetFromCenter(cell);
-        bool can = _scope.TowerBuild != null && _scope.TowerBuild.CanPlaceOffset(_placingDef, offset);
-
-        if (preview3D == null) return;
-        EnsurePlacementPreviewDef(cell);
-        preview3D.SetPlacementCanPlace(can);
-        preview3D.SetPlacementCell(cell, !_useMouse);
-        preview3D.SetPlacementTint(can ? canPlaceColor : cannotPlaceColor);
-    }
-
-    private void EnsurePlacementPreviewDef(Vector2Int cell)
-    {
-        if (preview3D == null) return;
-
-        TowerDefinitionSO previewDef = ResolvePlacementPreviewDef(cell);
-        if (previewDef == _placingPreviewDef) return;
-
-        _placingPreviewDef = previewDef;
-        if (_placingPreviewDef == null)
-        {
-            preview3D.ClearPlacementPreview();
-            return;
-        }
-
-        if (Debug.isDebugBuild)
-        {
-            Vector2Int offset = GetOffsetFromCenter(cell);
-            string baseId = _placingDef != null ? _placingDef.id : "null";
-            string previewId = _placingPreviewDef != null ? _placingPreviewDef.id : "null";
-            Debug.Log($"[BuildMenuPanel] PreviewDef changed base={baseId} preview={previewId} cell={cell} offset={offset}");
-        }
-
-        FootprintMaskUtility.GetFootprintData(_placingPreviewDef, out FootprintMaskSO mask, out Vector2Int size, out Vector2Int pivot);
-        preview3D.SetPlacementFootprint(mask, size, pivot);
-        preview3D.SetPlacementPrefab(_placingPreviewDef.prefab != null ? _placingPreviewDef.prefab.gameObject : null);
-        preview3D.SetPlacementActive(true);
-    }
-
-    private TowerDefinitionSO ResolvePlacementPreviewDef(Vector2Int cell)
-    {
-        if (_placingDef == null || _scope == null || _scope.TowerBuild == null) return _placingDef;
-        Vector2Int offset = GetOffsetFromCenter(cell);
-        if (_scope.TowerBuild.TryGetUpgradePreviewOffset(_placingDef, offset, out TowerDefinitionSO nextDef))
-            return nextDef;
-        if (preview3D != null && preview3D.TryGetPlacedTowerAtCell(cell, out TowerEntity placed))
-        {
-            if (placed != null && IsSameUpgradeChain(_placingDef, placed.Definition))
-            {
-                TowerDefinitionSO upgrade = placed.Definition != null ? placed.Definition.upgradeNext : null;
-                if (upgrade != null && upgrade.prefab != null)
-                    return upgrade;
-            }
-        }
-        if (TryGetUpgradeableTowerAtOffset(_placingDef, offset, out TowerEntity existing))
-        {
-            TowerDefinitionSO upgrade = existing.Definition != null ? existing.Definition.upgradeNext : null;
-            if (upgrade != null && upgrade.prefab != null)
-                return upgrade;
-        }
-        return _placingDef;
-    }
-
-    private bool TryGetUpgradeableTowerAtOffset(TowerDefinitionSO def, Vector2Int offset, out TowerEntity tower)
-    {
-        tower = null;
-        if (def == null || _scope?.Entities == null) return false;
-        var list = _scope.Entities.Towers;
-        if (list == null || list.Count == 0) return false;
-
-        Vector2Int cell = GetCenterCell() + offset;
-
-        for (int i = 0; i < list.Count; i++)
-        {
-            var t = list[i];
-            if (t == null) continue;
-            if (t.Definition == null) continue;
-            if (!IsSameUpgradeChain(def, t.Definition)) continue;
-            if (t.OffsetFromCenter == offset)
-            {
-                if (offset == Vector2Int.zero && t.Cell != GetCenterCell())
-                    continue;
-                tower = t;
-                return true;
-            }
-            if (t.Cell != cell) continue;
-            tower = t;
-            return true;
-        }
-
-        return false;
-    }
-
-    private static bool IsSameUpgradeChain(TowerDefinitionSO a, TowerDefinitionSO b)
-    {
-        if (a == null || b == null) return false;
-        if (IsUpgradeChainMatch(a, b)) return true;
-        return IsUpgradeChainMatch(b, a);
-    }
-
-    private static bool IsUpgradeChainMatch(TowerDefinitionSO root, TowerDefinitionSO target)
-    {
-        if (root == null || target == null) return false;
-        for (TowerDefinitionSO cur = root; cur != null; cur = cur.upgradeNext)
-        {
-            if (cur == target) return true;
-        }
-        return false;
-    }
-
-    private bool TryGetMouseCell(out Vector2Int cell)
-    {
-        cell = default;
-        if (placementCanvas == null) return false;
-        Camera cam = placementCanvas.renderMode == RenderMode.ScreenSpaceOverlay
-            ? null
-            : (placementCanvas.worldCamera != null ? placementCanvas.worldCamera : Camera.main);
-
-        if (preview3D != null && preview3D.TryScreenToCell(Input.mousePosition, placementCanvas, cam, out cell))
-            return true;
-
-        if (gridView == null) return false;
-        return gridView.TryScreenToCell(Input.mousePosition, placementCanvas, cam, out cell);
-    }
-
-    private int GetGridWidth()
-    {
-        if (_scope != null && _scope.Grid != null) return _scope.Grid.Width;
-        if (gridView != null) return gridView.Width;
-        if (preview3D != null) return preview3D.GridWidth;
-        return 1;
-    }
-
-    private int GetGridHeight()
-    {
-        if (_scope != null && _scope.Grid != null) return _scope.Grid.Height;
-        if (gridView != null) return gridView.Height;
-        if (preview3D != null) return preview3D.GridHeight;
-        return 1;
-    }
-
-    private Vector2Int GetCenterCell()
-    {
-        TryBindScope();
-        if (_scope != null)
-        {
-            if (_scope.TowerBuild != null) return _scope.TowerBuild.GetAnchorCell();
-            if (_scope.Grid != null) return _scope.Grid.CenterCell;
-        }
-        if (gridView != null) return gridView.CenterCell;
-        if (preview3D != null) return preview3D.CenterCell;
-        return Vector2Int.zero;
-    }
-
-    private void GetPlacementClamp(TowerDefinitionSO def, out Vector2Int minCell, out Vector2Int maxCell)
-    {
-        int w = GetGridWidth();
-        int h = GetGridHeight();
-        FootprintMaskUtility.GetFootprintData(def, out _, out Vector2Int size, out Vector2Int pivot);
-        size.x = Mathf.Max(1, size.x);
-        size.y = Mathf.Max(1, size.y);
-        pivot.x = Mathf.Clamp(pivot.x, 0, size.x - 1);
-        pivot.y = Mathf.Clamp(pivot.y, 0, size.y - 1);
-
-        minCell = new Vector2Int(pivot.x, pivot.y);
-        maxCell = new Vector2Int(
-            Mathf.Max(minCell.x, w - size.x + pivot.x),
-            Mathf.Max(minCell.y, h - size.y + pivot.y));
-    }
-
-    private void ClampPlacementCell(ref Vector2Int cell)
-    {
-        TowerDefinitionSO clampDef = ResolvePlacementPreviewDef(cell);
-        if (clampDef == null) clampDef = _placingDef;
-        if (clampDef == null)
-        {
-            cell = Vector2Int.zero;
-            return;
-        }
-
-        GetPlacementClamp(clampDef, out Vector2Int minCell, out Vector2Int maxCell);
-        cell.x = Mathf.Clamp(cell.x, minCell.x, maxCell.x);
-        cell.y = Mathf.Clamp(cell.y, minCell.y, maxCell.y);
-
-        TowerDefinitionSO afterClamp = ResolvePlacementPreviewDef(cell);
-        if (afterClamp != null && afterClamp != clampDef)
-        {
-            GetPlacementClamp(afterClamp, out minCell, out maxCell);
-            cell.x = Mathf.Clamp(cell.x, minCell.x, maxCell.x);
-            cell.y = Mathf.Clamp(cell.y, minCell.y, maxCell.y);
-        }
-    }
-
-    private void RefreshGridTiles()
-    {
-        if (preview3D == null) return;
-        if (_scope == null || _scope.Grid == null)
-        {
-            preview3D.ClearRoadTiles();
-            return;
-        }
-
-        int w = _scope.Grid.Width;
-        int h = _scope.Grid.Height;
-
-        if (!EnsureGridMasks(w, h)) return;
-
-        _roadCells.Clear();
-        GridRoadUtility.BuildRoadCells(
-            _scope.Grid,
-            GetCenterCell(),
-            _scope.BaseFootprintReserver,
-            _scope.Entities != null ? _scope.Entities.Towers : null,
-            _roadCells);
-
-        BuildGridRules.ComputeBuildable(_scope.Grid, _buildableMask, _occupiedMask, _roadCells);
-        preview3D.SetTileStates(_buildableMask, _occupiedMask);
-        RefreshRoadTiles();
-    }
-
-    private void RefreshRoadTiles()
-    {
-        if (preview3D == null) return;
-        if (_roadCells == null || _roadCells.Count == 0)
-        {
-            preview3D.ClearRoadTiles();
-            return;
-        }
-        preview3D.SetRoadCells(_roadCells);
-    }
-
-    private bool EnsureGridMasks(int w, int h)
-    {
-        if (_buildableMask == null || _buildableMask.GetLength(0) != w || _buildableMask.GetLength(1) != h)
-            _buildableMask = new bool[w, h];
-        if (_occupiedMask == null || _occupiedMask.GetLength(0) != w || _occupiedMask.GetLength(1) != h)
-            _occupiedMask = new bool[w, h];
-        return true;
+        EndPlacementUI(_pendingClose);
     }
 
     private void CancelPlacement()
     {
+        if (!_placing) return;
+        placementController?.CancelPlacement();
+        EndPlacementUI(_pendingClose);
+    }
+
+    private void EndPlacementUI(bool keepPending)
+    {
         _placing = false;
-        _placingDef = null;
-        _placingPreviewDef = null;
-        _hasPlacementCell = false;
-        _pendingClose = false;
-        StopCloseDelay();
-
-        if (preview3D != null)
-        {
-            preview3D.SetPlacementActive(false);
-            preview3D.ClearPlacementPreview();
-        }
-
+        if (!keepPending) _pendingClose = false;
+        if (!keepPending) StopCloseDelay();
         RestoreButtonsAfterPlacement();
     }
 
-    private void StartCloseDelay()
+    private void StartCloseDelay(float delay)
     {
         StopCloseDelay();
-        _closeRoutine = StartCoroutine(CloseAfterDelay());
+        _closeRoutine = StartCoroutine(CloseAfterDelay(delay));
     }
 
     private void StopCloseDelay()
@@ -751,9 +362,9 @@ public sealed class BuildMenuPanel : MonoBehaviour
         _closeRoutine = null;
     }
 
-    private System.Collections.IEnumerator CloseAfterDelay()
+    private System.Collections.IEnumerator CloseAfterDelay(float delay)
     {
-        float delay = Mathf.Max(0f, exitDelayAfterPlace);
+        delay = Mathf.Max(0f, delay);
         if (delay > 0f)
             yield return new WaitForSecondsRealtime(delay);
         ExitBuildMode();

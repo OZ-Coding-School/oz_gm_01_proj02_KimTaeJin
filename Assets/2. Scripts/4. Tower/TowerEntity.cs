@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+using System;
+using UnityEngine;
+using Random = UnityEngine.Random;
 
 [DisallowMultipleComponent]
 public sealed class TowerEntity : MonoBehaviour
@@ -179,6 +181,19 @@ public sealed class TowerEntity : MonoBehaviour
         if (_scope != null)
         {
             _scope.Entities?.UnregisterTower(this);
+            if (!_suppressGridRelease)
+            {
+                GridDataService dataService = _scope.GridData != null ? _scope.GridData : RunScopeLocator.Current?.GridData;
+                if (dataService != null)
+                {
+                    Vector3Int cell3 = new Vector3Int(Cell.x, 0, Cell.y);
+                    if (dataService.TryGet(cell3, out GridDataService.TowerData data))
+                    {
+                        if (_def != null && string.Equals(data.towerId, _def.id, StringComparison.Ordinal))
+                            dataService.TryRemove(cell3);
+                    }
+                }
+            }
             if (_scope.Grid != null && !_suppressGridRelease)
             {
                 if (_occupiedCells != null && _occupiedCells.Length > 0)
