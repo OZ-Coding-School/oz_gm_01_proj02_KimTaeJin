@@ -32,6 +32,7 @@ public sealed class ResourceProgression : MonoBehaviour
     public int WoodLevel => woodLevel;
     public int WoodStored => woodStored;
     public int WoodPerLevel => woodPerLevel;
+    public float WoodAttackSpeedBonusPerLevel => towerAttackSpeedBonusPerLevel;
     public int StoneLevel => stoneLevel;
     public int StoneStored => stoneStored;
     public int StoneCount => stoneCount;

@@ -122,6 +122,8 @@ public sealed class RunScope : MonoBehaviour
         GameManager = new GameManager(this);
 
         Spawner?.Construct(this);
+
+        RunScopeLocator.SetCurrent(this, true);
     }
 
     private void OnDestroy()

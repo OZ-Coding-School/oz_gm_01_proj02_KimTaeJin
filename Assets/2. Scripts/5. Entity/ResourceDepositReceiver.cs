@@ -57,6 +57,19 @@ public sealed class ResourceDepositReceiver : MonoBehaviour
             Debug.Log($"[ResourceDepositReceiver] wood={wood} stone={stone} target={gameObject.name}");
     }
 
+    public void Deposit(ResourceType type, int amount)
+    {
+        if (amount <= 0) return;
+
+        ResourceProgression progression = ResolveProgression();
+        if (progression == null) return;
+
+        progression.AddResource(type, amount);
+
+        if (debugLog)
+            Debug.Log($"[ResourceDepositReceiver] {type}={amount} target={gameObject.name}");
+    }
+
     private ResourceProgression ResolveProgression()
     {
         if (progressionOverride != null) return progressionOverride;

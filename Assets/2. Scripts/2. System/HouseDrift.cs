@@ -32,6 +32,9 @@ public sealed class HouseDrift : MonoBehaviour
     private static readonly Collider[] _overlapHits = new Collider[16];
     private readonly List<Bounds> _probeBounds = new List<Bounds>(32);
 
+    public Vector3 Direction => dir;
+    public float Speed => speed;
+
     private void Awake()
     {
         if (obstacleMask.value != 0) return;

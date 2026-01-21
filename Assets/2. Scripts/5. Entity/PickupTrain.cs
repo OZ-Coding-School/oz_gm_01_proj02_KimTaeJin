@@ -34,6 +34,10 @@ public sealed class PickupTrain : MonoBehaviour
     private Vector3 _lastRecorded;
     private bool _depositing;
     private float _autoDepositCooldown;
+    private static int _pendingDepositItems;
+
+    public static bool IsDepositAnimating => _pendingDepositItems > 0;
+    public static event System.Action<bool> DepositAnimationChanged;
 
     public int Count => _items.Count;
 
@@ -54,7 +58,11 @@ public sealed class PickupTrain : MonoBehaviour
         if (autoDepositMask.value == 0)
         {
             int buildingLayer = LayerMask.NameToLayer("Building");
-            autoDepositMask = (buildingLayer >= 0 && buildingLayer < 32) ? (1 << buildingLayer) : ~0;
+            int defaultLayer = 0;
+            if (buildingLayer >= 0 && buildingLayer < 32)
+                autoDepositMask = (1 << buildingLayer) | (1 << defaultLayer);
+            else
+                autoDepositMask = ~0;
         }
     }
 
@@ -246,15 +254,31 @@ public sealed class PickupTrain : MonoBehaviour
 
         _depositing = true;
         var receiver = building.GetComponentInParent<ResourceDepositReceiver>();
-        if (receiver != null)
-            receiver.Deposit(_items);
 
         Vector3 baseTarget = building.position + Vector3.up * 1.0f;
+        float dur = 0.65f;
+        int activeItems = 0;
+        for (int i = 0; i < _items.Count; i++)
+            if (_items[i] != null) activeItems++;
+
+        if (activeItems == 0)
+        {
+            _items.Clear();
+            _trail.Clear();
+            _trail.Add(transform.position);
+            _lastRecorded = transform.position;
+            DOVirtual.DelayedCall(0.35f, () => _depositing = false).SetUpdate(true);
+            return;
+        }
+
+        BeginDepositAnimation(activeItems);
 
         for (int i = 0; i < _items.Count; i++)
         {
             var item = _items[i];
             if (item == null) continue;
+            ResourceType itemType = item.ResourceType;
+            int itemAmount = item.Amount;
 
             Transform tr = item.transform;
             tr.DOKill();
@@ -279,14 +303,19 @@ public sealed class PickupTrain : MonoBehaviour
             Vector3 p2 = center + side * radius * Random.Range(0.7f, 1.2f) + Vector3.up * Random.Range(0.3f, 1.2f);
             Vector3 p3 = center + new Vector3(Random.Range(-0.2f, 0.2f), Random.Range(-0.1f, 0.4f), Random.Range(-0.2f, 0.2f));
 
-            float dur = 0.65f;
-
             Sequence seq = DOTween.Sequence();
             seq.AppendInterval(delay);
             seq.Append(tr.DOPath(new[] { p1, p2, p3 }, dur, PathType.CatmullRom).SetEase(Ease.InOutSine));
             seq.Join(tr.DORotate(new Vector3(0f, 720f, 0f), dur, RotateMode.FastBeyond360).SetEase(Ease.OutQuad));
             seq.Join(tr.DOScale(0f, dur).SetEase(Ease.InQuad));
-            seq.OnComplete(() => { if (item != null) Destroy(item.gameObject); });
+            seq.OnComplete(() =>
+            {
+                if (receiver != null && itemAmount > 0)
+                    receiver.Deposit(itemType, itemAmount);
+                if (item != null) Destroy(item.gameObject);
+                EndDepositAnimationItem();
+            });
+            seq.SetUpdate(true);
         }
 
 
@@ -296,6 +325,23 @@ public sealed class PickupTrain : MonoBehaviour
         _trail.Add(transform.position);
         _lastRecorded = transform.position;
 
-        DOVirtual.DelayedCall(0.35f, () => _depositing = false);
+        DOVirtual.DelayedCall(0.35f, () => _depositing = false).SetUpdate(true);
+    }
+
+    private static void BeginDepositAnimation(int itemCount)
+    {
+        if (itemCount <= 0) return;
+        bool wasActive = _pendingDepositItems > 0;
+        _pendingDepositItems += itemCount;
+        if (!wasActive)
+            DepositAnimationChanged?.Invoke(true);
+    }
+
+    private static void EndDepositAnimationItem()
+    {
+        if (_pendingDepositItems <= 0) return;
+        _pendingDepositItems -= 1;
+        if (_pendingDepositItems == 0)
+            DepositAnimationChanged?.Invoke(false);
     }
 }
