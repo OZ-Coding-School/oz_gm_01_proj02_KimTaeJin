@@ -29,6 +29,7 @@ public sealed class TowerPlacementController : MonoBehaviour
     public bool IsPlacing => _placing;
     public TowerDefinitionSO Selected => _selected;
     public Vector3Int CurrentCell => _currentCell;
+    public PanelGridView PanelGrid => panelGrid;
 
     private bool _placing;
     private TowerDefinitionSO _selected;

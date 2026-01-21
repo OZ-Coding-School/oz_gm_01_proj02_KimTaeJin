@@ -121,6 +121,7 @@ public sealed class PlacementVisualizer : MonoBehaviour
     private bool[,] _buildable;
     private bool _overlayDirty;
     private bool _panelRoadTileMetricsCached;
+    private bool _panelRoadTileMetricsLogged;
     private GameObject _panelRoadTilePrefabCache;
     private Vector3 _panelRoadTileBaseScale;
     private Vector3 _panelRoadTileCenter;
@@ -590,19 +591,38 @@ public sealed class PlacementVisualizer : MonoBehaviour
         }
 
         float panelAspect = panelCamera.aspect;
-        if (panelTexture != null && panelTexture.width > 0 && panelTexture.height > 0)
-            panelAspect = panelTexture.width / (float)panelTexture.height;
-        else if (panelTargetImage != null)
+        bool hasRectAspect = false;
+        float rectW = 0f;
+        float rectH = 0f;
+        Vector3 rectScale = Vector3.one;
+        if (panelTargetImage != null)
         {
             Rect rect = panelTargetImage.rectTransform.rect;
-            if (rect.width > 0.01f && rect.height > 0.01f)
-                panelAspect = rect.width / rect.height;
+            Vector3 scale = panelTargetImage.rectTransform.lossyScale;
+            rectScale = scale;
+            rectW = rect.width * Mathf.Abs(scale.x);
+            rectH = rect.height * Mathf.Abs(scale.y);
+            if (rectW > 0.01f && rectH > 0.01f)
+            {
+                panelAspect = rectW / rectH;
+                hasRectAspect = true;
+            }
         }
+        if (!hasRectAspect && panelTexture != null && panelTexture.width > 0 && panelTexture.height > 0)
+            panelAspect = panelTexture.width / (float)panelTexture.height;
 
         float aspectSafe = Mathf.Max(0.01f, panelAspect);
         float widthSafe = Mathf.Max(1, w);
         float heightSafe = Mathf.Max(1, h);
         float screenCellRatio = (1f / aspectSafe) * (widthSafe / heightSafe);
+        PanelGridView panelGridView = controller != null ? controller.PanelGrid : null;
+        if (panelGridView != null)
+        {
+            float cellW = panelGridView.CellWidth;
+            float cellH = panelGridView.CellHeight;
+            if (cellW > 0.01f && cellH > 0.01f)
+                screenCellRatio = cellH / cellW;
+        }
 
         Vector3 zInCam = panelCamera.transform.InverseTransformVector(Vector3.forward);
         Vector3 xInCam = panelCamera.transform.InverseTransformVector(Vector3.right);
@@ -623,6 +643,15 @@ public sealed class PlacementVisualizer : MonoBehaviour
 
         centerOffset.z = _panelBaseCenterOffsetZ * factor;
 
+        if (panelCamera.orthographic)
+        {
+            float projectedHeight = heightSafe * newCellZ * zScale;
+            float projectedWidth = widthSafe * newCellX * xScale;
+            float targetOrtho = 0.5f * Mathf.Max(projectedHeight, projectedWidth / aspectSafe);
+            if (!Mathf.Approximately(panelCamera.orthographicSize, targetOrtho))
+                panelCamera.orthographicSize = targetOrtho;
+        }
+
         bool changed = !_panelCompensatedSizeValid
                        || !Mathf.Approximately(_panelCompensatedCellX, newCellX)
                        || !Mathf.Approximately(_panelCompensatedCellZ, newCellZ);
@@ -632,6 +661,18 @@ public sealed class PlacementVisualizer : MonoBehaviour
             _panelCompensatedCellX = newCellX;
             _panelCompensatedCellZ = newCellZ;
             _panelCompensatedSizeValid = true;
+            if (debugLogs)
+            {
+                string rectInfo = hasRectAspect
+                    ? $"rect={rectW:F3}x{rectH:F3} scale={rectScale}"
+                    : "rect=none";
+                string panelGridInfo = panelGridView != null
+                    ? $"panelCell={panelGridView.CellWidth:F3}x{panelGridView.CellHeight:F3}"
+                    : "panelCell=none";
+                Debug.Log(
+                    $"[패널보정] aspect={panelAspect:F4} ratio={screenCellRatio:F4} base={baseCellX:F4},{baseCellZ:F4} new={newCellX:F4},{newCellZ:F4} grid={grid.cellSize} planeScale={gridPlaneScale} {rectInfo} {panelGridInfo}",
+                    this);
+            }
             RebuildGridPlanes();
             RebuildGridLines();
             MarkGridPlaneOverlayDirty();
@@ -1173,11 +1214,19 @@ public sealed class PlacementVisualizer : MonoBehaviour
         {
             ClearPanelRoadTiles();
             _panelRoadTileMetricsCached = false;
+            _panelRoadTileMetricsLogged = false;
             _panelRoadTilePrefabCache = prefab;
         }
 
         CachePanelRoadTileMetrics(prefab);
         GetPanelRoadTileTransform(out Vector3 tileScale, out Vector3 tileOffset);
+        if (debugLogs && !_panelRoadTileMetricsLogged)
+        {
+            _panelRoadTileMetricsLogged = true;
+            Debug.Log(
+                $"[패널도로] 스케일={tileScale} 오프셋={tileOffset} 셀={grid.cellSize} 정규화={normalizePanelRoadToCell} 격자스케일={gridPlaneScale}",
+                this);
+        }
         Quaternion rot = Quaternion.Euler(panelRoadRotation);
         Vector3 rotatedOffset = rot * tileOffset;
         EnsurePanelRoadRoot();
@@ -1274,6 +1323,14 @@ public sealed class PlacementVisualizer : MonoBehaviour
 
         if (usePanelRoadBottomOffset && _panelRoadTileBounds.size.y > 0.0001f)
             _panelRoadTileBottomOffset = -_panelRoadTileBounds.min.y * Mathf.Max(0.01f, panelRoadTileScaleMultiplier);
+
+        if (debugLogs)
+        {
+            string prefabName = prefab != null ? prefab.name : "null";
+            Debug.Log(
+                $"[패널도로] 프리팹={prefabName} baseScale={_panelRoadTileBaseScale} bounds={_panelRoadTileBounds.size} hasBounds={_panelRoadTileHasBounds} center={_panelRoadTileCenter} bottomOffset={_panelRoadTileBottomOffset:F4}",
+                this);
+        }
     }
 
     private void GetPanelRoadTileTransform(out Vector3 scale, out Vector3 offset)
@@ -1284,8 +1341,16 @@ public sealed class PlacementVisualizer : MonoBehaviour
         float mul = Mathf.Max(0.01f, panelRoadTileScaleMultiplier);
         if (normalizePanelRoadToCell && _panelRoadTileHasBounds && grid != null)
         {
-            float sx = grid.cellSize.x / Mathf.Max(0.0001f, _panelRoadTileBounds.size.x);
-            float sz = grid.cellSize.z / Mathf.Max(0.0001f, _panelRoadTileBounds.size.z);
+            float cellX = grid.cellSize.x;
+            float cellZ = grid.cellSize.z;
+            GridSystem gridSystem = dataService != null ? dataService.GridSystem : null;
+            if (gridSystem != null)
+            {
+                cellX = gridSystem.CellSizeX;
+                cellZ = gridSystem.CellSizeZ;
+            }
+            float sx = cellX / Mathf.Max(0.0001f, _panelRoadTileBounds.size.x);
+            float sz = cellZ / Mathf.Max(0.0001f, _panelRoadTileBounds.size.z);
             scale = new Vector3(_panelRoadTileBaseScale.x * sx, _panelRoadTileBaseScale.y, _panelRoadTileBaseScale.z * sz) * mul;
             if (centerPanelRoadToCell)
                 offset = new Vector3(-_panelRoadTileCenter.x * sx, 0f, -_panelRoadTileCenter.z * sz);
@@ -1313,8 +1378,13 @@ public sealed class PlacementVisualizer : MonoBehaviour
         temp.transform.rotation = Quaternion.identity;
         temp.transform.localScale = prefab.transform.localScale;
 
-        var renderers = temp.GetComponentsInChildren<Renderer>(true);
-        Bounds b = GetBounds(renderers);
+        var colliders = temp.GetComponentsInChildren<Collider>(true);
+        Bounds b = GetBounds(colliders);
+        if (b.size.sqrMagnitude < 0.0001f)
+        {
+            var renderers = temp.GetComponentsInChildren<Renderer>(true);
+            b = GetBounds(renderers);
+        }
 
         if (Application.isPlaying)
             Destroy(temp);
@@ -1338,6 +1408,24 @@ public sealed class PlacementVisualizer : MonoBehaviour
                 has = true;
             }
             else b.Encapsulate(r.bounds);
+        }
+        return b;
+    }
+
+    private static Bounds GetBounds(Collider[] colliders)
+    {
+        bool has = false;
+        Bounds b = new Bounds(Vector3.zero, Vector3.zero);
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            var c = colliders[i];
+            if (c == null) continue;
+            if (!has)
+            {
+                b = c.bounds;
+                has = true;
+            }
+            else b.Encapsulate(c.bounds);
         }
         return b;
     }
