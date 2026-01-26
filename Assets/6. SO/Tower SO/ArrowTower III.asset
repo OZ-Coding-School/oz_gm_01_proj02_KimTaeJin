@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd848319bbbd81749bda7f6c15ab82a1, type: 3}
+  m_Name: ArrowTower III
+  m_EditorClassIdentifier: 
+  id: ArrowTower III
+  displayName: "\uC2E0\uC131\uD3EC"
+  icon: {fileID: 21300000, guid: 2261ebedceeade240833d0ef9a65e6da, type: 3}
+  preview: {fileID: 0}
+  description: "\uBE60\uB978 \uC5F0\uC0AC\uD3EC\uD0D1\uC785\uB2C8\uB2E4!"
+  unlockBaseLevel: 1
+  prefab: {fileID: 3238119567860284709, guid: 53998e875b38e4f4fa6fd2fe5418d86f, type: 3}
+  footprint: {x: 1, y: 1}
+  footprintMask: {fileID: 11400000, guid: 02d76eff3c6191e4ca27662bb87dad0f, type: 2}
+  cost: 0
+  upgradeNext: {fileID: 0}
+  range: 24
+  attackSpeed: 8
+  damage: 10
+  knockback: 0.5
+  fireSfx: {fileID: 8300000, guid: 16a2a4443368ae84790ee24eb04c9f63, type: 3}
+  fireSfxVolume: 0.166
+  passiveExpGainBonus: 0
+  passiveTowerDamageBonus: 0
+  passiveTowerAttackSpeedBonus: 0
+  projectilePrefab: {fileID: 3916666564010246655, guid: fc705df192550d746814c2eaeb459253,
+    type: 3}
+  projectileSpeed: 50
+  projectileLifeTime: 2
+  hitEffect:
+    effectType: 0
+    overridePrefabEffects: 0
+    slowMultiplier: 0.05
+    slowDuration: 0
+    aoeRadius: 0
+    aoeDamageMultiplier: 0
+    aoeDamageOverride: 0
+    aoeIncludeDirectTarget: 0

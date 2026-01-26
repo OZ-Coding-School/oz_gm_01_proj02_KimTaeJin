@@ -12,6 +12,12 @@ public sealed class ResourceProgression : MonoBehaviour
     [SerializeField] private int baseExpPerWood = 1;
     [SerializeField] private int baseExpPerStone = 1;
 
+    [Header("밸런스")]
+    [SerializeField, Range(0.1f, 2f)] private float baseExpGainMultiplier = 0.65f;
+    [SerializeField, Range(0.5f, 3f)] private float baseExpRequirementMultiplier = 1.25f;
+    [SerializeField, Range(0.5f, 5f)] private float woodLevelRequirementMultiplier = 2f;
+    [SerializeField, Range(0.5f, 5f)] private float stoneLevelRequirementMultiplier = 1.5f;
+
     [Header("Wood Skill")]
     [SerializeField] private int woodLevel = 0;
     [SerializeField] private int woodStored = 0;
@@ -25,6 +31,8 @@ public sealed class ResourceProgression : MonoBehaviour
     [SerializeField] private int stonePerLevel = 10;
 
     private RunScope _scope;
+    private bool _expRequirementScaled;
+    private bool _skillRequirementScaled;
 
     public int BaseLevel => baseLevel;
     public int BaseExp => baseExp;
@@ -45,9 +53,21 @@ public sealed class ResourceProgression : MonoBehaviour
     public event Action<int, int, int> WoodProgressChanged;
     public event Action<int, int> StoneCountChanged;
 
+    public void AddStoneSkillExp(int amount)
+    {
+        AddStoneSkill(amount);
+    }
+
+    public void AddStoneBaseExp(int amount)
+    {
+        AddBaseExp(amount * Mathf.Max(0, baseExpPerStone));
+    }
+
     public void Construct(RunScope scope)
     {
         _scope = scope;
+        ApplyBaseExpRequirementScale();
+        ApplySkillRequirementScale();
         ApplyTowerSpeedBonus();
         RaiseBaseExpChanged();
         RaiseWoodProgressChanged();
@@ -66,17 +86,34 @@ public sealed class ResourceProgression : MonoBehaviour
                 return;
             case ResourceType.Stone:
                 AddBaseExp(amount * Mathf.Max(0, baseExpPerStone));
-                AddStone(amount);
+                AddStoneCount(amount);
+                return;
+            case ResourceType.Exp:
+                AddBaseExp(amount);
                 return;
             default:
                 return;
         }
     }
 
+    public int ConsumeStone(int amount)
+    {
+        if (amount <= 0) return 0;
+        int consume = Mathf.Min(amount, stoneCount);
+        if (consume <= 0) return 0;
+        stoneCount -= consume;
+        RaiseStoneCountChanged();
+        return consume;
+    }
+
     private void AddBaseExp(int amount)
     {
         if (amount <= 0) return;
-        baseExp += amount;
+        float mult = _scope != null ? _scope.ExpGainMultiplier : 1f;
+        float baseMult = Mathf.Max(0f, baseExpGainMultiplier);
+        int scaled = Mathf.Max(0, Mathf.RoundToInt(amount * baseMult * Mathf.Max(0.01f, mult)));
+        if (scaled <= 0) return;
+        baseExp += scaled;
 
         int guard = 0;
         while (baseExpToLevel > 0 && baseExp >= baseExpToLevel && guard < 1000)
@@ -89,6 +126,30 @@ public sealed class ResourceProgression : MonoBehaviour
         }
 
         RaiseBaseExpChanged();
+    }
+
+    private void ApplyBaseExpRequirementScale()
+    {
+        if (_expRequirementScaled) return;
+        _expRequirementScaled = true;
+        float mul = Mathf.Max(0.01f, baseExpRequirementMultiplier);
+        baseExpToLevel = Mathf.Max(1, Mathf.RoundToInt(baseExpToLevel * mul));
+        baseExpToLevelStep = Mathf.Max(0, Mathf.RoundToInt(baseExpToLevelStep * mul));
+    }
+
+    private void ApplySkillRequirementScale()
+    {
+        if (_skillRequirementScaled) return;
+        _skillRequirementScaled = true;
+
+        float woodMul = Mathf.Max(0.01f, woodLevelRequirementMultiplier);
+        float stoneMul = Mathf.Max(0.01f, stoneLevelRequirementMultiplier);
+
+        if (woodPerLevel > 0)
+            woodPerLevel = Mathf.Max(1, Mathf.RoundToInt(woodPerLevel * woodMul));
+
+        if (stonePerLevel > 0)
+            stonePerLevel = Mathf.Max(1, Mathf.RoundToInt(stonePerLevel * stoneMul));
     }
 
     private void AddWood(int amount)
@@ -112,11 +173,10 @@ public sealed class ResourceProgression : MonoBehaviour
         RaiseWoodProgressChanged();
     }
 
-    private void AddStone(int amount)
+    private void AddStoneSkill(int amount)
     {
         if (amount <= 0) return;
         stoneStored += amount;
-        stoneCount += amount;
         if (stonePerLevel <= 0)
         {
             RaiseStoneCountChanged();
@@ -130,6 +190,13 @@ public sealed class ResourceProgression : MonoBehaviour
             StoneLevelUp?.Invoke(stoneLevel);
         }
 
+        RaiseStoneCountChanged();
+    }
+
+    private void AddStoneCount(int amount)
+    {
+        if (amount <= 0) return;
+        stoneCount += amount;
         RaiseStoneCountChanged();
     }
 

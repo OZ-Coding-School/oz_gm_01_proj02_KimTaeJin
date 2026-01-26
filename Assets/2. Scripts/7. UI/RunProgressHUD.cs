@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -26,21 +27,42 @@ public sealed class RunProgressHUD : MonoBehaviour
     [SerializeField] private bool autoFindRestStops = true;
     [SerializeField] private RestStopMarker[] restStops;
 
+    [Header("중간 지점")]
+    [SerializeField] private bool autoFindMidPoints = true;
+    [SerializeField] private RunProgressPoint[] midPoints;
+
+    [Header("Progress Markers")]
+    [SerializeField] private RectTransform markerTrack;
+    [SerializeField] private RectTransform markerRoot;
+    [SerializeField] private GameObject restStopMarkerPrefab;
+    [SerializeField] private RectTransform midPointMarkerRoot;
+    [SerializeField] private GameObject midPointMarkerPrefab;
+    [SerializeField] private RectTransform goalMarker;
+    [SerializeField] private float markerPadding = 6f;
+    [SerializeField] private bool markerTopToBottom = true;
+    [SerializeField] private bool autoBuildMarkers = true;
+
     private Vector3 _axis;
     private bool _axisResolved;
     private Vector3 _startPos;
+    private bool _startCaptured;
     private HouseDrift _houseDrift;
+    private readonly List<RectTransform> _restStopMarkers = new();
+    private readonly List<RectTransform> _midPointMarkers = new();
+    private bool _markersDirty;
 
     private void Awake()
     {
         ResolveRefs();
         CaptureStart();
+        MarkMarkersDirty();
     }
 
     private void OnEnable()
     {
         ResolveRefs();
         CaptureStart();
+        MarkMarkersDirty();
     }
 
     private void Update()
@@ -62,6 +84,7 @@ public sealed class RunProgressHUD : MonoBehaviour
             progressSlider.SetValueWithoutNotify(progress01);
 
         UpdateTexts(current, total);
+        UpdateMarkers(total);
     }
 
     private void ResolveRefs()
@@ -80,14 +103,32 @@ public sealed class RunProgressHUD : MonoBehaviour
 
         if (autoFindRestStops && (restStops == null || restStops.Length == 0))
             restStops = FindObjectsOfType<RestStopMarker>(true);
+
+        if (autoFindRestStops)
+            MarkMarkersDirty();
+
+        if (autoFindMidPoints && (midPoints == null || midPoints.Length == 0))
+            midPoints = FindObjectsOfType<RunProgressPoint>(true);
+
+        if (autoFindMidPoints)
+            MarkMarkersDirty();
     }
 
     private void CaptureStart()
     {
         if (startPoint != null)
+        {
             _startPos = startPoint.position;
-        else if (progressSubject != null)
+            _startCaptured = true;
+            return;
+        }
+
+        if (_startCaptured) return;
+        if (progressSubject != null)
+        {
             _startPos = progressSubject.position;
+            _startCaptured = true;
+        }
     }
 
     private void ResolveAxis()
@@ -143,5 +184,166 @@ public sealed class RunProgressHUD : MonoBehaviour
         }
 
         return best == float.MaxValue ? -1f : best;
+    }
+
+    private void MarkMarkersDirty()
+    {
+        _markersDirty = true;
+    }
+
+    private void UpdateMarkers(float total)
+    {
+        if (markerTrack == null) return;
+        if (total <= 0.0001f) return;
+
+        if (autoBuildMarkers)
+            EnsureMarkers();
+
+        float yMin = markerTrack.rect.yMin + markerPadding;
+        float yMax = markerTrack.rect.yMax - markerPadding;
+        if (yMax < yMin)
+        {
+            float tmp = yMax;
+            yMax = yMin;
+            yMin = tmp;
+        }
+
+        for (int i = 0; i < _restStopMarkers.Count; i++)
+        {
+            var marker = _restStopMarkers[i];
+            var stop = (restStops != null && i < restStops.Length) ? restStops[i] : null;
+            if (marker == null || stop == null || stop.Point == null) continue;
+
+            float stopDist = Vector3.Dot(stop.Point.position - _startPos, _axis);
+            float t = Mathf.Clamp01(stopDist / total);
+            float y = markerTopToBottom ? Mathf.Lerp(yMax, yMin, t) : Mathf.Lerp(yMin, yMax, t);
+            Vector2 pos = marker.anchoredPosition;
+            pos.y = y;
+            marker.anchoredPosition = pos;
+        }
+
+        for (int i = 0; i < _midPointMarkers.Count; i++)
+        {
+            var marker = _midPointMarkers[i];
+            var point = (midPoints != null && i < midPoints.Length) ? midPoints[i] : null;
+            if (marker == null || point == null || point.Point == null) continue;
+
+            float dist = Vector3.Dot(point.Point.position - _startPos, _axis);
+            float t = Mathf.Clamp01(dist / total);
+            float y = markerTopToBottom ? Mathf.Lerp(yMax, yMin, t) : Mathf.Lerp(yMin, yMax, t);
+            Vector2 pos = marker.anchoredPosition;
+            pos.y = y;
+            marker.anchoredPosition = pos;
+        }
+
+        if (goalMarker != null)
+        {
+            float y = markerTopToBottom ? yMin : yMax;
+            Vector2 pos = goalMarker.anchoredPosition;
+            pos.y = y;
+            goalMarker.anchoredPosition = pos;
+        }
+    }
+
+    private void EnsureMarkers()
+    {
+        int restCount = restStops != null ? restStops.Length : 0;
+        int midCount = midPoints != null ? midPoints.Length : 0;
+        if (!_markersDirty && _restStopMarkers.Count == restCount && _midPointMarkers.Count == midCount)
+            return;
+        _markersDirty = false;
+
+        EnsureMarkerSet(_restStopMarkers, restCount, markerRoot, restStopMarkerPrefab);
+        EnsureMarkerSet(_midPointMarkers, midCount, ResolveMidPointRoot(), ResolveMidPointPrefab());
+
+        ApplyMarkerVisuals();
+    }
+
+    private void ClearMarkers()
+    {
+        ClearMarkerSet(_restStopMarkers);
+        ClearMarkerSet(_midPointMarkers);
+    }
+
+    private void ApplyMarkerVisuals()
+    {
+        ApplyRestStopMarkerVisuals();
+        ApplyMidPointMarkerVisuals();
+    }
+
+    private void ApplyRestStopMarkerVisuals()
+    {
+        if (restStops == null || restStops.Length == 0) return;
+
+        for (int i = 0; i < _restStopMarkers.Count; i++)
+        {
+            var marker = _restStopMarkers[i];
+            if (marker == null) continue;
+            var view = marker.GetComponent<RestStopMarkerView>();
+            if (view == null) continue;
+            var stop = (i < restStops.Length) ? restStops[i] : null;
+            view.Apply(stop);
+        }
+    }
+
+    private void ApplyMidPointMarkerVisuals()
+    {
+        if (midPoints == null || midPoints.Length == 0) return;
+
+        for (int i = 0; i < _midPointMarkers.Count; i++)
+        {
+            var marker = _midPointMarkers[i];
+            if (marker == null) continue;
+            var view = marker.GetComponent<RestStopMarkerView>();
+            if (view == null) continue;
+            var point = (i < midPoints.Length) ? midPoints[i] : null;
+            view.Apply(point);
+        }
+    }
+
+    private RectTransform ResolveMidPointRoot()
+    {
+        return midPointMarkerRoot != null ? midPointMarkerRoot : markerRoot;
+    }
+
+    private GameObject ResolveMidPointPrefab()
+    {
+        return midPointMarkerPrefab != null ? midPointMarkerPrefab : restStopMarkerPrefab;
+    }
+
+    private void EnsureMarkerSet(List<RectTransform> list, int targetCount, RectTransform root, GameObject prefab)
+    {
+        if (root == null || prefab == null || targetCount <= 0)
+        {
+            ClearMarkerSet(list);
+            return;
+        }
+
+        for (int i = list.Count - 1; i >= targetCount; i--)
+        {
+            if (list[i] != null)
+                Destroy(list[i].gameObject);
+            list.RemoveAt(i);
+        }
+
+        for (int i = list.Count; i < targetCount; i++)
+        {
+            var go = Instantiate(prefab, root);
+            var rect = go.GetComponent<RectTransform>();
+            if (rect != null)
+                list.Add(rect);
+            else
+                Destroy(go);
+        }
+    }
+
+    private void ClearMarkerSet(List<RectTransform> list)
+    {
+        for (int i = 0; i < list.Count; i++)
+        {
+            if (list[i] != null)
+                Destroy(list[i].gameObject);
+        }
+        list.Clear();
     }
 }

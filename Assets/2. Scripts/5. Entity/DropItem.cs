@@ -7,6 +7,11 @@ public sealed class DropItem : MonoBehaviour
     [SerializeField] private int amount = 1;
     [SerializeField] private ResourceType resourceType = ResourceType.Wood;
 
+    [Header("??(??)")]
+    [SerializeField] private bool useTagFallback = false;
+    [SerializeField] private string woodTag = "Wood";
+    [SerializeField] private string stoneTag = "Stone";
+
     [Header("Spawn Pop")]
     [SerializeField] private float popDuration = 0.2f;
     [SerializeField] private float jumpDuration = 0.35f;
@@ -26,12 +31,15 @@ public sealed class DropItem : MonoBehaviour
 
     private Transform _player;
     private Vector3 _baseScale;
+    private int _baseAmount;
     private bool _flying;
     private Collider _col;
     private Rigidbody _rb;
     public int Amount => amount;
     public ResourceType ResourceType => resourceType;
     private bool _isFollower;
+    private bool _countedOnPickup;
+    public bool CountedOnPickup => _countedOnPickup;
 
     public void AddAmount(int add)
     {
@@ -43,10 +51,27 @@ public sealed class DropItem : MonoBehaviour
             visual.DOPunchScale(new Vector3(0.12f, -0.08f, 0.12f), 0.15f, 8, 1f);
         }
     }
+    public void SetAmount(int value)
+    {
+        amount = Mathf.Max(1, value);
+    }
+
+    public void Despawn()
+    {
+        if (GameRoot.Instance != null && GameRoot.Instance.Pool != null)
+        {
+            GameRoot.Instance.Pool.Despawn(gameObject);
+            return;
+        }
+
+        Destroy(gameObject);
+    }
+
     private void Awake()
     {
         if (visual == null) visual = transform;
         _baseScale = visual.localScale;
+        _baseAmount = amount;
 
         _col = GetComponent<Collider>();
         _rb = GetComponent<Rigidbody>();
@@ -67,17 +92,6 @@ public sealed class DropItem : MonoBehaviour
         if (visual == null) return;
         visual.localScale = _baseScale * mul;
     }
-
-    private void Start()
-    {
-        visual.localScale = Vector3.zero;
-        visual.DOScale(_baseScale * groundScaleMul, popDuration).SetEase(Ease.OutBack);
-
-        Vector3 end = transform.position + new Vector3(Random.Range(-scatter, scatter), 0f, Random.Range(-scatter, scatter));
-        transform.DOJump(end, jumpPower, 1, jumpDuration).SetEase(Ease.OutQuad);
-    }
-
-
 
     private void Update()
     {
@@ -134,16 +148,41 @@ public sealed class DropItem : MonoBehaviour
     {
         if (_player == null)
         {
-            Destroy(gameObject);
+            Despawn();
             return;
         }
 
         if (resourceType == ResourceType.Exp)
         {
+            var progression = RunScopeLocator.Current != null ? RunScopeLocator.Current.Progression : null;
+            if (progression != null)
+            {
+                progression.AddResource(ResourceType.Exp, amount);
+                Despawn();
+                return;
+            }
+
             var xp = _player.GetComponentInParent<PlayerExperience>();
             if (xp != null) xp.AddExp(amount);
-            Destroy(gameObject);
+            Despawn();
             return;
+        }
+
+        var sfxType = ResolveSfxResourceType();
+        if (sfxType == ResourceType.Wood || sfxType == ResourceType.Stone)
+        {
+            GameAudio.Instance?.PlayHarvestPickup(sfxType);
+        }
+
+
+        if (resourceType == ResourceType.Stone && !_countedOnPickup)
+        {
+            var progression = RunScopeLocator.Current != null ? RunScopeLocator.Current.Progression : null;
+            if (progression != null)
+            {
+                progression.AddStoneSkillExp(amount);
+                _countedOnPickup = true;
+            }
         }
 
         var train = _player.GetComponentInParent<PickupTrain>();
@@ -153,17 +192,43 @@ public sealed class DropItem : MonoBehaviour
             return;
         }
 
-        Destroy(gameObject);
+        Despawn();
+    }
+
+    private ResourceType ResolveSfxResourceType()
+    {
+        if (resourceType != ResourceType.None)
+            return resourceType;
+
+        if (!useTagFallback) return ResourceType.None;
+        if (IsTagged(woodTag)) return ResourceType.Wood;
+        if (IsTagged(stoneTag)) return ResourceType.Stone;
+        return ResourceType.None;
+    }
+
+    private bool IsTagged(string tag)
+    {
+        if (string.IsNullOrEmpty(tag)) return false;
+        try
+        {
+            if (CompareTag(tag)) return true;
+            var parent = transform.parent;
+            return parent != null && parent.CompareTag(tag);
+        }
+        catch
+        {
+            return false;
+        }
     }
     private void OnEnable()
     {
         _isFollower = false;
+        _countedOnPickup = false;
+        _player = null;
+        amount = _baseAmount;
 
         _flying = false;
         enabled = true;
-
-        if (visual != null) ApplyScale(groundScaleMul);
-
 
         if (_col != null) _col.enabled = true;
 
@@ -174,6 +239,8 @@ public sealed class DropItem : MonoBehaviour
             _rb.isKinematic = false;  
             _rb.useGravity = false;
         }
+
+        PlaySpawnPop();
     }
 
     private void OnDisable()
@@ -205,6 +272,21 @@ public sealed class DropItem : MonoBehaviour
             rb.useGravity = false;
         }
 
+    }
+
+    private void PlaySpawnPop()
+    {
+        transform.DOKill();
+        if (visual != null) visual.DOKill();
+
+        if (visual != null)
+        {
+            visual.localScale = Vector3.zero;
+            visual.DOScale(_baseScale * groundScaleMul, popDuration).SetEase(Ease.OutBack);
+        }
+
+        Vector3 end = transform.position + new Vector3(Random.Range(-scatter, scatter), 0f, Random.Range(-scatter, scatter));
+        transform.DOJump(end, jumpPower, 1, jumpDuration).SetEase(Ease.OutQuad);
     }
 
 }

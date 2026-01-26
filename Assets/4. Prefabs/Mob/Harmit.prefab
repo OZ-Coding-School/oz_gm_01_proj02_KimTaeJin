@@ -166,7 +166,13 @@ GameObject:
   m_Component:
   - component: {fileID: 3162852625065483440}
   - component: {fileID: 6734911614572247533}
-  m_Layer: 0
+  - component: {fileID: -8180859187544866733}
+  - component: {fileID: -1999658297159502899}
+  - component: {fileID: -7598070818082044928}
+  - component: {fileID: 3444011922108841482}
+  - component: {fileID: -5290013728101446333}
+  - component: {fileID: 4763704108154457340}
+  m_Layer: 6
   m_Name: Harmit
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -235,6 +241,146 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!54 &-8180859187544866733
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 365977834918091028}
+  serializedVersion: 4
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
+--- !u!136 &-1999658297159502899
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 365977834918091028}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 1
+  m_Height: 1
+  m_Direction: 1
+  m_Center: {x: 0, y: 0.5, z: 0}
+--- !u!114 &-7598070818082044928
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 365977834918091028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f13e2a46f63e7dd428d2b6bf433b3c10, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  slowEffect: {fileID: 0}
+  autoFind: 1
+  renderers: []
+  includeInactive: 1
+  tintColor: {r: 0, g: 0.38554192, b: 1, a: 1}
+  tintStrength: 0.95
+  useEmission: 0
+  emissionIntensity: 2
+--- !u!114 &3444011922108841482
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 365977834918091028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0aa013dc7b64cb439e407e32be16fac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  useDeathTween: 1
+  deathUseUnscaledTime: 1
+  deathDuration: 0.05
+  deathRise: 0.6
+  deathPopScale: 1.5
+  deathPopUpRatio: 0.95
+  deathPopUpEase: 27
+  deathPopDownEase: 26
+  deathEase: 26
+  deathVisual: {fileID: 0}
+  deathSpriteFxPrefab: {fileID: 2830415115201853124, guid: 10b91271247c7d14b8bef1f28ee324fb,
+    type: 3}
+  deathSpriteUsePool: 1
+--- !u!114 &-5290013728101446333
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 365977834918091028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: afae46bfc80690b4db2c90b6a877e33e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxHp: 25
+  resetOnEnable: 1
+--- !u!114 &4763704108154457340
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 365977834918091028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 47f36ecec1c58974ab296bc4abd97858, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  visual: {fileID: 0}
+  animator: {fileID: 0}
+  rotateLerp: 12
+  moveThreshold: 0.02
+  targetMode: 0
+  retargetInterval: 0.3
+  attackRange: 1.3
+  attacksPerSecond: 1
+  attackDamage: 10
+  useAttackAnimation: 1
+  drawAttackRangeGizmo: 1
+  attackRangeGizmoColor: {r: 0.35, g: 1, b: 0.35, a: 0.4}
+  attackRangeGizmoYOffset: 0.5
+  usePlayerPriority: 1
+  playerPriorityRange: 5
+  playerPriorityLoseRange: 7
+  drawPlayerPriorityGizmo: 1
+  playerPriorityGizmoColor: {r: 1, g: 0.85, b: 0.2, a: 0.45}
+  playerPriorityLoseGizmoColor: {r: 1, g: 0.45, b: 0.1, a: 0.25}
 --- !u!1 &388025629656024659
 GameObject:
   m_ObjectHideFlags: 0

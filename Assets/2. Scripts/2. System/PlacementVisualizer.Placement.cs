@@ -62,6 +62,7 @@ public sealed partial class PlacementVisualizer : MonoBehaviour
         {
             DisableGameplay(tower.gameObject);
             ApplyPanelBasePlateScale(tower.gameObject);
+            ApplyAimSnapshot(cell, tower);
         }
 
         _placed[cell] = new PlacedView
@@ -228,5 +229,45 @@ public sealed partial class PlacementVisualizer : MonoBehaviour
     {
         for (int i = 0; i < renderers.Length; i++)
             if (renderers[i] != null) renderers[i].enabled = on;
+    }
+
+    public void SetAimSnapshots(Dictionary<Vector2Int, AimSnapshot> snapshots)
+    {
+        _aimSnapshots.Clear();
+        if (snapshots != null)
+        {
+            foreach (var kvp in snapshots)
+                _aimSnapshots[kvp.Key] = kvp.Value;
+        }
+        if (!isWorldVisualizer)
+            ApplyAimSnapshotsToPlaced();
+    }
+
+    public void ClearAimSnapshots()
+    {
+        _aimSnapshots.Clear();
+    }
+
+    private void ApplyAimSnapshotsToPlaced()
+    {
+        if (_aimSnapshots.Count == 0) return;
+        foreach (var kvp in _placed)
+        {
+            var view = kvp.Value;
+            if (view == null || view.tower == null) continue;
+            Vector2Int cell = new Vector2Int(kvp.Key.x, kvp.Key.z);
+            if (_aimSnapshots.TryGetValue(cell, out AimSnapshot snap))
+                view.tower.ApplyAimSnapshot(snap.yawWorldRot, snap.pitchLocalRot, snap.hasPitch);
+        }
+    }
+
+    private void ApplyAimSnapshot(Vector3Int cell, TowerEntity tower)
+    {
+        if (isWorldVisualizer) return;
+        if (tower == null) return;
+        if (_aimSnapshots.Count == 0) return;
+        Vector2Int cell2 = new Vector2Int(cell.x, cell.z);
+        if (_aimSnapshots.TryGetValue(cell2, out AimSnapshot snap))
+            tower.ApplyAimSnapshot(snap.yawWorldRot, snap.pitchLocalRot, snap.hasPitch);
     }
 }

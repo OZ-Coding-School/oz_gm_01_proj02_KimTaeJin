@@ -19,6 +19,15 @@ public sealed class EnemyBrain : MonoBehaviour
     [SerializeField] private TargetMode targetMode = TargetMode.TowerOrCenter;
     [SerializeField] private float retargetInterval = 0.3f;
 
+    [Header("Attack (Building)")]
+    [SerializeField] private float attackRange = 1.3f;
+    [SerializeField] private float attacksPerSecond = 1f;
+    [SerializeField] private int attackDamage = 10;
+    [SerializeField] private bool useAttackAnimation = true;
+    [SerializeField] private bool drawAttackRangeGizmo = true;
+    [SerializeField] private Color attackRangeGizmoColor = new Color(0.35f, 1f, 0.35f, 0.4f);
+    [SerializeField] private float attackRangeGizmoYOffset = 0f;
+
     [Header("Player Priority")]
     [SerializeField] private bool usePlayerPriority = true;
     [SerializeField] private float playerPriorityRange = 5f;
@@ -28,20 +37,23 @@ public sealed class EnemyBrain : MonoBehaviour
     [SerializeField] private Color playerPriorityLoseGizmoColor = new Color(1f, 0.45f, 0.1f, 0.25f);
 
     private RunScope _scope;
-    private float _speed;
+    private float _baseSpeed;
+    private float _speedMultiplier = 1f;
     private Rigidbody _rb;
     private static readonly int MoveSpeedHash = Animator.StringToHash("MoveSpeed");
+    private static readonly int AttackHash = Animator.StringToHash("Attack");
 
     private float _knockTimer;
     private Vector3 _knockVel;
     private Transform _currentTarget;
     private float _retargetTimer;
     private bool _playerPriorityActive;
+    private float _attackTimer;
 
     public void Construct(RunScope scope, float speed)
     {
         _scope = scope;
-        _speed = speed;
+        _baseSpeed = speed;
 
         if (visual == null) visual = transform;
         if (animator == null) animator = visual.GetComponentInChildren<Animator>();
@@ -54,6 +66,11 @@ public sealed class EnemyBrain : MonoBehaviour
         _rb.isKinematic = false;
 
         _rb.drag = 8f;
+    }
+
+    public void SetSpeedMultiplier(float multiplier)
+    {
+        _speedMultiplier = Mathf.Max(0f, multiplier);
     }
 
     public void Knockback(Vector3 dir, float force, float duration = 0.12f)
@@ -94,23 +111,25 @@ public sealed class EnemyBrain : MonoBehaviour
 
         float distSqr = toTarget.sqrMagnitude;
         bool moving = distSqr > (moveThreshold * moveThreshold);
+        bool attacking = TryAttackBuilding(_currentTarget, distSqr);
 
-        Vector3 dir = moving ? toTarget.normalized : Vector3.zero;
+        Vector3 dir = moving && !attacking ? toTarget.normalized : Vector3.zero;
 
-        if (moving)
+        if (moving && !attacking)
         {
-            Vector3 next = _rb.position + dir * (_speed * Time.fixedDeltaTime);
+            float moveSpeed = _baseSpeed * Mathf.Max(0f, _speedMultiplier);
+            Vector3 next = _rb.position + dir * (moveSpeed * Time.fixedDeltaTime);
             _rb.MovePosition(next);
         }
 
-        if (moving && visual != null)
+        if (moving && !attacking && visual != null)
         {
             Quaternion targetRot = Quaternion.LookRotation(dir, Vector3.up);
             visual.rotation = Quaternion.Slerp(visual.rotation, targetRot, rotateLerp * Time.fixedDeltaTime);
         }
 
         if (animator != null)
-            animator.SetFloat(MoveSpeedHash, moving ? 1f : 0f, 0.08f, Time.deltaTime);
+            animator.SetFloat(MoveSpeedHash, moving && !attacking ? 1f : 0f, 0.08f, Time.deltaTime);
     }
 
     private void UpdateTarget()
@@ -172,32 +191,40 @@ public sealed class EnemyBrain : MonoBehaviour
 
     private Transform ResolveTowerOrCenter()
     {
-        var towers = _scope.Entities?.Towers;
-        if (towers != null && towers.Count > 0)
+        Transform best = ResolveSharedBuildingTarget();
+        if (best != null) return best;
+        return ResolveCenterTarget();
+    }
+
+    private Transform ResolveSharedBuildingTarget()
+    {
+        var list = SharedBuildingHealthProxy.Active;
+        if (list == null || list.Count == 0) return null;
+
+        Transform best = null;
+        float bestD = float.MaxValue;
+        Vector3 p = _rb.position;
+
+        for (int i = 0; i < list.Count; i++)
         {
-            Transform best = null;
-            float bestD = float.MaxValue;
-            Vector3 p = _rb.position;
+            var proxy = list[i];
+            if (proxy == null || !proxy.isActiveAndEnabled) continue;
+            var shared = proxy.SharedHealth;
+            if (shared == null || shared.IsDead) continue;
 
-            for (int i = 0; i < towers.Count; i++)
+            Transform t = proxy.transform;
+            if (t == null || t == transform) continue;
+            Vector3 d = t.position - p;
+            d.y = 0f;
+            float dd = d.sqrMagnitude;
+            if (dd < bestD)
             {
-                var t = towers[i];
-                if (t == null) continue;
-                Vector3 d = t.transform.position - p;
-                d.y = 0f;
-                float dd = d.sqrMagnitude;
-                if (dd < bestD)
-                {
-                    bestD = dd;
-                    best = t.transform;
-                }
+                bestD = dd;
+                best = t;
             }
-
-            if (best != null)
-                return best;
         }
 
-        return ResolveCenterTarget();
+        return best;
     }
 
     private Transform ResolveCenterTarget()
@@ -211,11 +238,21 @@ public sealed class EnemyBrain : MonoBehaviour
 
     private void OnDrawGizmosSelected()
     {
+        Vector3 pos = transform.position;
+
+        if (drawAttackRangeGizmo)
+        {
+            float range = Mathf.Max(0.05f, attackRange);
+            Gizmos.color = attackRangeGizmoColor;
+            Vector3 center = visual != null ? visual.position : pos;
+            center.y += attackRangeGizmoYOffset;
+            Gizmos.DrawWireSphere(center, range);
+        }
+
         if (!drawPlayerPriorityGizmo) return;
 
         float enter = Mathf.Max(0.1f, playerPriorityRange);
         float exit = Mathf.Max(enter, playerPriorityLoseRange);
-        Vector3 pos = transform.position;
 
         Gizmos.color = playerPriorityGizmoColor;
         Gizmos.DrawWireSphere(pos, enter);
@@ -225,5 +262,26 @@ public sealed class EnemyBrain : MonoBehaviour
             Gizmos.color = playerPriorityLoseGizmoColor;
             Gizmos.DrawWireSphere(pos, exit);
         }
+    }
+
+    private bool TryAttackBuilding(Transform target, float distSqr)
+    {
+        if (target == null) return false;
+        var proxy = target.GetComponentInParent<SharedBuildingHealthProxy>();
+        if (proxy == null) return false;
+        if (proxy.SharedHealth == null || proxy.SharedHealth.IsDead) return false;
+
+        float range = Mathf.Max(0.05f, attackRange);
+        if (distSqr > range * range) return false;
+
+        _attackTimer -= Time.fixedDeltaTime;
+        if (_attackTimer > 0f) return true;
+
+        _attackTimer = attacksPerSecond > 0f ? (1f / attacksPerSecond) : 1f;
+        if (useAttackAnimation && animator != null)
+            animator.SetTrigger(AttackHash);
+
+        proxy.ApplyDamage(Mathf.Max(0, attackDamage));
+        return true;
     }
 }

@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 67276c976a0900a4993e10b431847b8d, type: 3}
+  m_Name: SfxCatalog_
+  m_EditorClassIdentifier: 
+  towerPlaceConfirm:
+    clip: {fileID: 8300000, guid: 4326c5a239cd4694a949efe979671b73, type: 3}
+    volume: 0.803
+  towerPlaceBlocked:
+    clip: {fileID: 0}
+    volume: 0
+  harvestHit:
+    clip: {fileID: 0}
+    volume: 0
+  harvestPickup:
+    clip: {fileID: 0}
+    volume: 0
+  harvestHitWood:
+    clip: {fileID: 8300000, guid: 6a512c2ae50b1174fa629369e2d210c3, type: 3}
+    volume: 0.12
+  harvestHitStone:
+    clip: {fileID: 8300000, guid: adc80768e8ff16146b978f3266757acd, type: 3}
+    volume: 0.12
+  harvestPickupWood:
+    clip: {fileID: 0}
+    volume: 0
+  harvestPickupStone:
+    clip: {fileID: 0}
+    volume: 0
+  restStopEnter:
+    clip: {fileID: 0}
+    volume: 0
+  restStopExit:
+    clip: {fileID: 0}
+    volume: 0
+  playerHit:
+    clip: {fileID: 8300000, guid: 8090605329e263b469057a32d12a608f, type: 3}
+    volume: 0.399
+  lowHpPulse:
+    clip: {fileID: 8300000, guid: 6cee3b874cd13aa4ebc5462f3347a101, type: 3}
+    volume: 0.518
+  pathBlocked:
+    clip: {fileID: 8300000, guid: b98b888e0d94d0341b15d0862d26efc5, type: 3}
+    volume: 0.518

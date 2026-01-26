@@ -6,6 +6,9 @@ public sealed class PlayerController : MonoBehaviour
     [Header("Move")]
     [SerializeField] private float _turnSpeed = 720f;
 
+    [Header("Collision Fix")]
+    [SerializeField] private bool lockExternalPush = true;
+
     [Header("Boundary (soft radius)")]
     [SerializeField] private PlayAreaProgressController playArea;
     [SerializeField] private bool clampToRadius = true;
@@ -93,6 +96,12 @@ public sealed class PlayerController : MonoBehaviour
         {
             float animMove = inputDir.magnitude * _moveSpeedMul;
             _anim.SetFloat(MoveSpeedHash, animMove);
+        }
+
+        if (_rb != null && lockExternalPush)
+        {
+            _rb.velocity = Vector3.zero;
+            _rb.angularVelocity = Vector3.zero;
         }
     }
 

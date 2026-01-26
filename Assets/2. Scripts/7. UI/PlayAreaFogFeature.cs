@@ -43,6 +43,8 @@ public sealed class PlayAreaFogFeature : ScriptableRendererFeature
 
         if (renderingData.cameraData.isPreviewCamera)
             return;
+        if (renderingData.cameraData.renderType == CameraRenderType.Overlay)
+            return;
         var cam = renderingData.cameraData.camera;
         if (cam != null && cam.GetComponent<PlayAreaFogIgnore>() != null)
             return;
@@ -55,6 +57,8 @@ public sealed class PlayAreaFogFeature : ScriptableRendererFeature
         if (settings == null || settings.material == null)
             return;
         if (renderingData.cameraData.isPreviewCamera)
+            return;
+        if (renderingData.cameraData.renderType == CameraRenderType.Overlay)
             return;
         var cam = renderingData.cameraData.camera;
         if (cam != null && cam.GetComponent<PlayAreaFogIgnore>() != null)

@@ -13,20 +13,35 @@ MonoBehaviour:
   m_Name: FireTower_Lv2
   m_EditorClassIdentifier: 
   id: FireTower_Lv2
-  displayName: Fire Tower II
+  displayName: "\uACE0\uC5F4\uD3EC II"
   icon: {fileID: 21300000, guid: 2261ebedceeade240833d0ef9a65e6da, type: 3}
   preview: {fileID: 0}
-  description: Shoot Powerful Fire
+  description: "\uAC15\uB825\uD55C \uD654\uC5FC \uD3EC\uD0D1\uC785\uB2C8\uB2E4!"
+  unlockBaseLevel: 1
   prefab: {fileID: 1606545443155748938, guid: 4134a87189508e840a462887509c4bcc, type: 3}
   footprint: {x: 1, y: 1}
   footprintMask: {fileID: 11400000, guid: 02d76eff3c6191e4ca27662bb87dad0f, type: 2}
   cost: 0
   upgradeNext: {fileID: 11400000, guid: 18411cb36abae6e46bcf0142030d9b98, type: 2}
-  range: 17
-  fireInterval: 0.5
+  range: 25
+  attackSpeed: 2
   damage: 40
   knockback: 1
+  fireSfx: {fileID: 8300000, guid: 3175d0e66ecf9984799a906b8d3cea62, type: 3}
+  fireSfxVolume: 0.321
+  passiveExpGainBonus: 0
+  passiveTowerDamageBonus: 0
+  passiveTowerAttackSpeedBonus: 0
   projectilePrefab: {fileID: 5733162599812708132, guid: 38bf2ff592c3f0a4e92af108436cc3e4,
     type: 3}
   projectileSpeed: 35
   projectileLifeTime: 2
+  hitEffect:
+    effectType: 0
+    overridePrefabEffects: 0
+    slowMultiplier: 0.05
+    slowDuration: 0
+    aoeRadius: 0
+    aoeDamageMultiplier: 0
+    aoeDamageOverride: 0
+    aoeIncludeDirectTarget: 0

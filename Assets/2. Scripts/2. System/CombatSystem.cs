@@ -8,6 +8,7 @@ public sealed class CombatSystem
         var hp = target.GetComponent<HealthComponent>();
         if (hp == null) return;
         hp.ApplyDamage(amount);
+        DamageNumberService.TryShow(amount, target.transform.position);
     }
 
     public void Knockback(EnemyEntity target, Vector3 from, float force)

@@ -99,6 +99,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: 'Tree1 '
       objectReference: {fileID: 0}
+    - target: {fileID: 6715275329358183230, guid: 6c50d5ea7f06f8b42833e7789b19af11,
+        type: 3}
+      propertyPath: m_TagString
+      value: Wood
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -211,6 +216,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: CommonTree_4
+      objectReference: {fileID: 0}
+    - target: {fileID: 3563637716650526391, guid: 80bd7696d666401418d872a125d10d8d,
+        type: 3}
+      propertyPath: m_TagString
+      value: Wood
       objectReference: {fileID: 0}
     - target: {fileID: 4197149466493705229, guid: 80bd7696d666401418d872a125d10d8d,
         type: 3}
@@ -542,9 +552,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHp: 3
+  maxDamagePerHit: 1
   dropPrefab: {fileID: 0}
   dropCount: 0
   dropScatterRadius: 0.6
+  resourceTypeOverride: 0
+  useTagFallback: 1
+  woodTag: Wood
+  stoneTag: Stone
 --- !u!4 &7834413515820764930 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: ca543e81c46e9f8479269a98c445aa00,

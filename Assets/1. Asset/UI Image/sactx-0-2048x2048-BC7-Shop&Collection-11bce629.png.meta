@@ -116,7 +116,7 @@ TextureImporter:
         x: 0
         y: 0
         width: 1927
-        height: 1092
+        height: 1080
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -139,7 +139,7 @@ TextureImporter:
         width: 427
         height: 105
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -160,7 +160,7 @@ TextureImporter:
         width: 413
         height: 93
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 4}
       outline: []
       physicsShape: []
@@ -168,6 +168,48 @@ TextureImporter:
       bones: []
       spriteID: d7587d79c2f12294e9da6ca18fd7c67e
       internalID: 1528646875
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Null SPace
+      rect:
+        serializedVersion: 2
+        x: 1573
+        y: 1730
+        width: 161
+        height: 128
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 658af1ac8efb1f84997d224f1d68409d
+      internalID: -1289396438
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ddddddd
+      rect:
+        serializedVersion: 2
+        x: 946
+        y: 1085
+        width: 515
+        height: 111
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 91c55ea46f3bd7e479c7fafdfa9ad5a8
+      internalID: -544198865
       vertices: []
       indices: 
       edges: []
@@ -187,8 +229,10 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
+      Null SPace: -1289396438
       Tower Select Base: 1060671780
       Tower Select Name: 1528646875
+      ddddddd: -544198865
       muyaho1: 1641006434
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0

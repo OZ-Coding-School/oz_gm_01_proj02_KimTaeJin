@@ -10,6 +10,9 @@ public sealed class GameManager
     {
         Debug.Log("[GameManager] StartRun");
 
+        if (_scope?.Entities != null && _scope.Entities.Player != null)
+            return;
+
         PlayerEntity player;
 
         Vector3 spawnPos = Vector3.zero; 

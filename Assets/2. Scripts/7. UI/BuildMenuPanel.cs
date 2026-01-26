@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.EventSystems;
 
 public sealed class BuildMenuPanel : MonoBehaviour
 {
@@ -18,6 +20,10 @@ public sealed class BuildMenuPanel : MonoBehaviour
     [Header("Grid View")]
     [SerializeField] private PanelGridView gridView;
     [SerializeField] private TowerPlacementController placementController;
+
+    [Header("Panel Aim Snapshot")]
+    [SerializeField] private bool captureTowerAimSnapshot = true;
+    [SerializeField] private PlacementVisualizer panelVisualizer;
 
     [Header("Options (3)")]
     [SerializeField] private TowerBuildButton[] optionButtons;
@@ -42,6 +48,7 @@ public sealed class BuildMenuPanel : MonoBehaviour
     private RunScope _scope;
     private GridDataService _gridData;
     private readonly List<TowerDefinitionSO> _draft = new();
+    private readonly Dictionary<Vector2Int, PlacementVisualizer.AimSnapshot> _aimSnapshots = new();
     private bool _economyBound;
 
     private bool _placing;
@@ -52,6 +59,7 @@ public sealed class BuildMenuPanel : MonoBehaviour
     private Tween _dimFade;
 
     public bool IsOpen => root != null && root.activeInHierarchy;
+    public event Action<bool> OpenStateChanged;
 
     private void Awake()
     {
@@ -62,6 +70,8 @@ public sealed class BuildMenuPanel : MonoBehaviour
         if (rerollButton != null) rerollButton.onClick.AddListener(OnRerollClicked);
         if (closeButton != null) closeButton.onClick.AddListener(ExitBuildMode);
         if (rerollCostText != null) rerollCostText.text = rerollCost.ToString();
+        DisableNavigation(rerollButton);
+        DisableNavigation(closeButton);
 
         if (placementController != null)
         {
@@ -110,6 +120,47 @@ public sealed class BuildMenuPanel : MonoBehaviour
         _gridData = _scope != null ? _scope.GridData : null;
     }
 
+    private void CaptureAimSnapshots()
+    {
+        if (!captureTowerAimSnapshot) return;
+        TryBindScope();
+        if (_scope == null || _scope.Entities == null) return;
+        ResolvePanelVisualizer();
+        if (panelVisualizer == null) return;
+
+        _aimSnapshots.Clear();
+
+        var towers = _scope.Entities.Towers;
+        for (int i = 0; i < towers.Count; i++)
+        {
+            var tower = towers[i];
+            if (tower == null) continue;
+            if (!tower.TryGetAimSnapshot(out Quaternion yaw, out Quaternion pitch, out bool hasPitch)) continue;
+            _aimSnapshots[tower.Cell] = new PlacementVisualizer.AimSnapshot
+            {
+                yawWorldRot = yaw,
+                pitchLocalRot = pitch,
+                hasPitch = hasPitch
+            };
+        }
+
+        panelVisualizer.SetAimSnapshots(_aimSnapshots);
+    }
+
+    private void ResolvePanelVisualizer()
+    {
+        if (panelVisualizer != null) return;
+        var list = FindObjectsOfType<PlacementVisualizer>(true);
+        for (int i = 0; i < list.Length; i++)
+        {
+            if (list[i] != null && !list[i].IsWorldVisualizer)
+            {
+                panelVisualizer = list[i];
+                break;
+            }
+        }
+    }
+
     public void Open()
     {
         TryBindScope();
@@ -118,8 +169,11 @@ public sealed class BuildMenuPanel : MonoBehaviour
         _pendingClose = false;
         StopCloseDelay();
         ShowPanel(true);
+        ClearUnitySelection();
 
         _scope.Events.PushBuildMode(this);
+
+        CaptureAimSnapshots();
 
         if (gridView != null)
             gridView.Refresh();
@@ -164,6 +218,7 @@ public sealed class BuildMenuPanel : MonoBehaviour
         if (show)
         {
             root.SetActive(true);
+            OpenStateChanged?.Invoke(true);
             if (panelGroup != null)
             {
                 panelGroup.alpha = forcePanelVisibleOnOpen ? 1f : 0f;
@@ -208,11 +263,13 @@ public sealed class BuildMenuPanel : MonoBehaviour
                 last.OnComplete(() =>
                 {
                     if (root != null) root.SetActive(false);
+                    OpenStateChanged?.Invoke(false);
                 });
             }
             else
             {
                 root.SetActive(false);
+                OpenStateChanged?.Invoke(false);
             }
         }
     }
@@ -231,12 +288,14 @@ public sealed class BuildMenuPanel : MonoBehaviour
 
         if (moved)
         {
+            ClearUnitySelection();
             int next = FindNextSelectable(_selectedIndex, dir);
             if (next >= 0) SetSelectedIndex(next);
         }
 
         if (Input.GetKeyDown(confirmKey) && _selectedIndex >= 0)
         {
+            ClearUnitySelection();
             var btn = optionButtons[_selectedIndex];
             if (btn != null && btn.Tower != null)
                 BeginPlacement(btn);
@@ -464,6 +523,21 @@ public sealed class BuildMenuPanel : MonoBehaviour
         Draft();
     }
 
+    private void DisableNavigation(Button btn)
+    {
+        if (btn == null) return;
+        var nav = btn.navigation;
+        nav.mode = Navigation.Mode.None;
+        btn.navigation = nav;
+    }
+
+    private void ClearUnitySelection()
+    {
+        if (EventSystem.current == null) return;
+        if (EventSystem.current.currentSelectedGameObject == null) return;
+        EventSystem.current.SetSelectedGameObject(null);
+    }
+
     private void Draft()
     {
         TryBindScope();
@@ -478,17 +552,28 @@ public sealed class BuildMenuPanel : MonoBehaviour
 
         _draft.Clear();
 
+        int baseLevel = GetBaseLevel();
+
         var pool = new List<TowerDefinitionSO>(catalog.Length);
         for (int i = 0; i < catalog.Length; i++)
-            if (catalog[i] != null) pool.Add(catalog[i]);
+        {
+            var def = catalog[i];
+            if (def == null) continue;
+            if (!IsUnlocked(def, baseLevel)) continue;
+            pool.Add(def);
+        }
 
-        if (pool.Count == 0) return;
+        if (pool.Count == 0)
+        {
+            HideAllOptions();
+            return;
+        }
 
         bool dup = allowDuplicates || pool.Count < n;
 
         for (int i = 0; i < n; i++)
         {
-            int idx = Random.Range(0, pool.Count);
+            int idx = UnityEngine.Random.Range(0, pool.Count);
             var picked = pool[idx];
             _draft.Add(picked);
             if (!dup) pool.RemoveAt(idx);
@@ -509,5 +594,31 @@ public sealed class BuildMenuPanel : MonoBehaviour
 
         ClearSelection();
         EnsureDefaultSelection();
+    }
+
+    private int GetBaseLevel()
+    {
+        if (_scope != null && _scope.Progression != null)
+            return Mathf.Max(1, _scope.Progression.BaseLevel);
+        return 1;
+    }
+
+    private static bool IsUnlocked(TowerDefinitionSO def, int baseLevel)
+    {
+        if (def == null) return false;
+        int need = Mathf.Max(1, def.unlockBaseLevel);
+        return baseLevel >= need;
+    }
+
+    private void HideAllOptions()
+    {
+        if (optionButtons == null) return;
+        for (int i = 0; i < optionButtons.Length; i++)
+        {
+            var btn = optionButtons[i];
+            if (btn == null) continue;
+            btn.gameObject.SetActive(false);
+        }
+        ClearSelection();
     }
 }

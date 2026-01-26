@@ -520,7 +520,9 @@ public sealed class FootprintVisualBaker : MonoBehaviour
         if (gun == null) return;
 
         Transform yawPivot = gun;
-        Transform pitchPivot = FindChildByName(yawPivot, "PitchPivot") ?? FindChildByName(yawPivot, "Pitch");
+        Transform pitchPivot = FindChildByName(yawPivot, "PitchPivot")
+            ?? FindChildByName(yawPivot, "PitchPivotOrigin")
+            ?? FindChildByName(yawPivot, "Pitch");
         Transform gunVisual = null;
         bool wrapped = false;
 
@@ -543,7 +545,7 @@ public sealed class FootprintVisualBaker : MonoBehaviour
                 wrapped = true;
             }
 
-            pitchPivot = EnsureChild(yawPivot, "PitchPivot");
+            pitchPivot = EnsureChild(yawPivot, "PitchPivotOrigin");
         }
 
         Transform gunVisualRoot = EnsureChild(pitchPivot, "GunVisualRoot");

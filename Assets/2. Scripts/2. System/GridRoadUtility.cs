@@ -11,6 +11,20 @@ public static class GridRoadUtility
         new Vector2Int(0, -1)
     };
 
+    public readonly struct RoadTower
+    {
+        public readonly Vector2Int Anchor;
+        public readonly TowerDefinitionSO Def;
+        public readonly int Order;
+
+        public RoadTower(Vector2Int anchor, TowerDefinitionSO def, int order)
+        {
+            Anchor = anchor;
+            Def = def;
+            Order = order;
+        }
+    }
+
     public static void BuildRoadCells(
         GridSystem grid,
         Vector2Int centerAnchor,
@@ -20,8 +34,75 @@ public static class GridRoadUtility
     {
         if (results == null) return;
         results.Clear();
-
         if (grid == null || towers == null || towers.Count == 0) return;
+
+        var nodes = new List<TowerNode>();
+        for (int i = 0; i < towers.Count; i++)
+        {
+            var tower = towers[i];
+            if (tower == null) continue;
+            var def = tower.Definition;
+            if (def == null) continue;
+
+            Vector2Int anchor = tower.Cell;
+            if (!grid.IsInBounds(anchor)) continue;
+
+            FootprintMaskUtility.GetFootprintData(def, out FootprintMaskSO mask, out Vector2Int size, out Vector2Int pivot);
+            var footprint = new List<Vector2Int>();
+            FootprintMaskUtility.GetFootprintCells(mask, size, pivot, anchor, footprint);
+            nodes.Add(new TowerNode(anchor, footprint));
+        }
+
+        BuildRoadCellsInternal(grid, centerAnchor, baseFootprint, nodes, results);
+    }
+
+    public static void BuildRoadCells(
+        GridSystem grid,
+        Vector2Int centerAnchor,
+        BaseFootprintReserver baseFootprint,
+        IReadOnlyList<RoadTower> towers,
+        HashSet<Vector2Int> results)
+    {
+        if (results == null) return;
+        results.Clear();
+        if (grid == null || towers == null || towers.Count == 0) return;
+
+        var ordered = new List<RoadTower>(towers);
+        ordered.Sort((a, b) =>
+        {
+            int o = a.Order.CompareTo(b.Order);
+            if (o != 0) return o;
+            int x = a.Anchor.x.CompareTo(b.Anchor.x);
+            return x != 0 ? x : a.Anchor.y.CompareTo(b.Anchor.y);
+        });
+
+        var nodes = new List<TowerNode>();
+        for (int i = 0; i < ordered.Count; i++)
+        {
+            RoadTower tower = ordered[i];
+            if (tower.Def == null) continue;
+            if (!grid.IsInBounds(tower.Anchor)) continue;
+
+            FootprintMaskUtility.GetFootprintData(tower.Def, out FootprintMaskSO mask, out Vector2Int size, out Vector2Int pivot);
+            var footprint = new List<Vector2Int>();
+            FootprintMaskUtility.GetFootprintCells(mask, size, pivot, tower.Anchor, footprint);
+            nodes.Add(new TowerNode(tower.Anchor, footprint));
+        }
+
+        BuildRoadCellsInternal(grid, centerAnchor, baseFootprint, nodes, results);
+    }
+
+    private static void BuildRoadCellsInternal(
+        GridSystem grid,
+        Vector2Int centerAnchor,
+        BaseFootprintReserver baseFootprint,
+        List<TowerNode> nodes,
+        HashSet<Vector2Int> results)
+    {
+        if (results == null) return;
+        results.Clear();
+
+        if (grid == null || nodes == null || nodes.Count == 0) return;
         if (!grid.IsInBounds(centerAnchor)) return;
 
         var centerFootprint = new HashSet<Vector2Int>();
@@ -51,26 +132,8 @@ public static class GridRoadUtility
 
         var centerFootprintList = new List<Vector2Int>(centerFootprint);
 
-        var nodes = new List<TowerNode>();
-        for (int i = 0; i < towers.Count; i++)
-        {
-            var tower = towers[i];
-            if (tower == null) continue;
-            var def = tower.Definition;
-            if (def == null) continue;
-
-            Vector2Int anchor = tower.Cell;
-            if (!grid.IsInBounds(anchor)) continue;
-
-            FootprintMaskUtility.GetFootprintData(def, out FootprintMaskSO mask, out Vector2Int size, out Vector2Int pivot);
-            var footprint = new List<Vector2Int>();
-            FootprintMaskUtility.GetFootprintCells(mask, size, pivot, anchor, footprint);
-            nodes.Add(new TowerNode(tower, anchor, footprint));
-        }
-
-        if (nodes.Count == 0) return;
-
         var passable = new HashSet<Vector2Int>();
+        var priorTowerCells = new HashSet<Vector2Int>();
         var exclude = new HashSet<Vector2Int>();
         var pathA = new List<Vector2Int>();
         var pathB = new List<Vector2Int>();
@@ -88,14 +151,14 @@ public static class GridRoadUtility
             List<Vector2Int> bestTargetFootprint = null;
             bestPath.Clear();
 
-            EvaluateCandidate(grid, start, startFootprint, centerAnchor, centerFootprintList,
+            EvaluateCandidate(grid, start, startFootprint, centerAnchor, centerFootprintList, priorTowerCells,
                 passable, pathA, pathB, candidatePath,
                 ref bestDist, ref bestBlocked, ref bestTargetFootprint, bestPath);
 
             for (int t = 0; t < i; t++)
             {
                 TowerNode other = nodes[t];
-                EvaluateCandidate(grid, start, startFootprint, other.Anchor, other.Footprint,
+                EvaluateCandidate(grid, start, startFootprint, other.Anchor, other.Footprint, priorTowerCells,
                     passable, pathA, pathB, candidatePath,
                     ref bestDist, ref bestBlocked, ref bestTargetFootprint, bestPath);
             }
@@ -113,18 +176,18 @@ public static class GridRoadUtility
                 if (grid.IsOccupied(cell)) continue;
                 results.Add(cell);
             }
+
+            AddFootprint(priorTowerCells, startFootprint);
         }
     }
 
     private sealed class TowerNode
     {
-        public readonly TowerEntity Tower;
         public readonly Vector2Int Anchor;
         public readonly List<Vector2Int> Footprint;
 
-        public TowerNode(TowerEntity tower, Vector2Int anchor, List<Vector2Int> footprint)
+        public TowerNode(Vector2Int anchor, List<Vector2Int> footprint)
         {
-            Tower = tower;
             Anchor = anchor;
             Footprint = footprint;
         }
@@ -136,6 +199,7 @@ public static class GridRoadUtility
         List<Vector2Int> startFootprint,
         Vector2Int end,
         List<Vector2Int> endFootprint,
+        HashSet<Vector2Int> extraPassable,
         HashSet<Vector2Int> passable,
         List<Vector2Int> pathA,
         List<Vector2Int> pathB,
@@ -153,6 +217,7 @@ public static class GridRoadUtility
         AddFootprint(passable, endFootprint);
         passable.Add(start);
         passable.Add(end);
+        AddCells(passable, extraPassable);
 
         int blocked = BuildBestLPath(grid, start, end, passable, pathA, pathB, candidatePath);
         if (dist < bestDist || (dist == bestDist && blocked < bestBlocked))
@@ -249,6 +314,13 @@ public static class GridRoadUtility
         if (set == null || cells == null) return;
         for (int i = 0; i < cells.Count; i++)
             set.Add(cells[i]);
+    }
+
+    private static void AddCells(HashSet<Vector2Int> set, HashSet<Vector2Int> cells)
+    {
+        if (set == null || cells == null) return;
+        foreach (var cell in cells)
+            set.Add(cell);
     }
 
     public static bool TryFindShortestPath(

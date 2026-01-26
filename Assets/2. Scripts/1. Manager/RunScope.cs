@@ -19,7 +19,9 @@ public sealed class RunScope : MonoBehaviour
 
     public GameManager GameManager { get; private set; }
     public EnemySpawnSystem Spawner { get; private set; }
-    public float TowerAttackSpeedMultiplier => _towerAttackSpeedMultiplier;
+    public float TowerAttackSpeedMultiplier => _towerAttackSpeedBase * (1f + _towerAttackSpeedBonus);
+    public float TowerDamageMultiplier => 1f + _towerDamageBonus;
+    public float ExpGainMultiplier => 1f + _expGainBonus;
 
     [Header("Required")]
     [SerializeField] private GridSystem grid;
@@ -38,7 +40,10 @@ public sealed class RunScope : MonoBehaviour
     [SerializeField] private EnemySpawnSystem spawner;
 
     private bool _initialized;
-    private float _towerAttackSpeedMultiplier = 1f;
+    private float _towerAttackSpeedBase = 1f;
+    private float _towerAttackSpeedBonus = 0f;
+    private float _towerDamageBonus = 0f;
+    private float _expGainBonus = 0f;
 
     public void Initialize(AppServicesRoot app)
     {
@@ -89,9 +94,18 @@ public sealed class RunScope : MonoBehaviour
 
         if (grid != null && GameRoot.Instance != null)
         {
-            if (GameRoot.Instance.BuildAnchor != null)
+            Transform anchor = GameRoot.Instance.BuildAnchor;
+            if (anchor != null && anchor.GetComponentInParent<Canvas>(true) != null)
+                anchor = null;
+            if (anchor == null)
             {
-                grid.Configure(GameRoot.Instance.BuildCellSize, GameRoot.Instance.BuildCellSizeZScale, GameRoot.Instance.BuildAnchor,
+                var house = FindObjectOfType<HouseDrift>();
+                if (house != null) anchor = house.transform;
+            }
+
+            if (anchor != null)
+            {
+                grid.Configure(GameRoot.Instance.BuildCellSize, GameRoot.Instance.BuildCellSizeZScale, anchor,
                     GameRoot.Instance.BuildWidth, GameRoot.Instance.BuildHeight, GameRoot.Instance.BuildAnchorOffset, GameRoot.Instance.BuildCenter);
             }
             else
@@ -102,6 +116,8 @@ public sealed class RunScope : MonoBehaviour
 
         Grid?.ClearAll();
         EnsureGridRoadSystem();
+        EnsureSharedBuildingHealthSystem();
+        EnsurePlayerExpLevelHeal();
 
         gridData?.Construct(this);
         buildMode?.Construct(this);
@@ -169,7 +185,22 @@ public sealed class RunScope : MonoBehaviour
 
     public void SetTowerAttackSpeedMultiplier(float multiplier)
     {
-        _towerAttackSpeedMultiplier = Mathf.Max(0.01f, multiplier);
+        _towerAttackSpeedBase = Mathf.Max(0.01f, multiplier);
+    }
+
+    public void AddTowerAttackSpeedBonus(float delta)
+    {
+        _towerAttackSpeedBonus = Mathf.Max(-0.9f, _towerAttackSpeedBonus + delta);
+    }
+
+    public void AddTowerDamageBonus(float delta)
+    {
+        _towerDamageBonus = Mathf.Max(-0.9f, _towerDamageBonus + delta);
+    }
+
+    public void AddExpGainBonus(float delta)
+    {
+        _expGainBonus = Mathf.Max(-0.9f, _expGainBonus + delta);
     }
 
     private void EnsureGridRoadSystem()
@@ -177,5 +208,25 @@ public sealed class RunScope : MonoBehaviour
         if (GetComponent<GridRoadSystem>() != null) return;
         if (Object.FindObjectOfType<GridRoadSystem>(true) != null) return;
         gameObject.AddComponent<GridRoadSystem>();
+    }
+
+    private void EnsureSharedBuildingHealthSystem()
+    {
+        if (GetComponent<SharedBuildingHealth>() == null)
+            gameObject.AddComponent<SharedBuildingHealth>();
+        if (GetComponent<SharedBuildingHealthBinder>() == null)
+            gameObject.AddComponent<SharedBuildingHealthBinder>();
+        if (GetComponent<SharedBuildingHealthGameOverPause>() == null)
+            gameObject.AddComponent<SharedBuildingHealthGameOverPause>();
+        if (GetComponent<SharedBuildingStoneRepair>() == null)
+            gameObject.AddComponent<SharedBuildingStoneRepair>();
+        if (GetComponent<SharedBuildingBaseLevelHeal>() == null)
+            gameObject.AddComponent<SharedBuildingBaseLevelHeal>();
+    }
+
+    private void EnsurePlayerExpLevelHeal()
+    {
+        if (GetComponent<PlayerExpLevelHeal>() == null)
+            gameObject.AddComponent<PlayerExpLevelHeal>();
     }
 }

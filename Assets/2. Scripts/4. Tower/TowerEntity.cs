@@ -55,6 +55,13 @@ public sealed class TowerEntity : MonoBehaviour
     {
         _scope = scope;
         _def = def;
+        var passive = GetComponent<TowerPassiveBuff>();
+        if (passive == null && def != null)
+        {
+            if (def.passiveExpGainBonus > 0f || def.passiveTowerDamageBonus > 0f || def.passiveTowerAttackSpeedBonus > 0f)
+                passive = gameObject.AddComponent<TowerPassiveBuff>();
+        }
+        if (passive != null) passive.Configure(def);
         _cool = Random.Range(0f, GetFireInterval());
         _constructed = true;
     }
@@ -67,6 +74,8 @@ public sealed class TowerEntity : MonoBehaviour
     private void Update()
     {
         if (!_constructed || _scope == null || _def == null) return;
+
+        if (_def.attackSpeed <= 0f) return;
 
         _cool -= Time.deltaTime;
         if (_cool > 0f) return;
@@ -139,6 +148,8 @@ public sealed class TowerEntity : MonoBehaviour
 
     private void Fire(EnemyEntity target)
     {
+        float damageMul = _scope != null ? _scope.TowerDamageMultiplier : 1f;
+        int dmg = Mathf.Max(0, Mathf.RoundToInt(_def.damage * damageMul));
         if (_def.projectilePrefab != null && _scope?.App?.Pool != null)
         {
             ResolvePivots();
@@ -161,19 +172,29 @@ public sealed class TowerEntity : MonoBehaviour
                 _scope,
                 _def.projectilePrefab.gameObject,
                 dir,
-                _def.damage,
+                dmg,
                 _def.projectileSpeed,
                 _def.projectileLifeTime,
-                _def.knockback
+                _def.knockback,
+                _def.hitEffect
             );
 
+            PlayFireSfx();
             return;
         }
 
-        _scope.Combat.DealDamage(target, _def.damage);
+        _scope.Combat.DealDamage(target, dmg);
 
         if (_def.knockback > 0f)
             _scope.Combat.Knockback(target, transform.position, _def.knockback);
+
+        PlayFireSfx();
+    }
+
+    private void PlayFireSfx()
+    {
+        if (_def == null || _def.fireSfx == null) return;
+        GameAudio.Instance?.PlaySfx(_def.fireSfx, _def.fireSfxVolume);
     }
 
     private void OnDestroy()
@@ -223,6 +244,8 @@ public sealed class TowerEntity : MonoBehaviour
         {
             pitchPivot = baseT.Find("PitchPivot");
             if (pitchPivot == null)
+                pitchPivot = baseT.Find("PitchPivotOrigin");
+            if (pitchPivot == null)
                 pitchPivot = baseT.Find("Pitch");
         }
 
@@ -233,10 +256,39 @@ public sealed class TowerEntity : MonoBehaviour
         }
     }
 
+    public bool TryGetAimSnapshot(out Quaternion yawWorldRot, out Quaternion pitchLocalRot, out bool hasPitch)
+    {
+        ResolvePivots();
+        Transform yawT = yawPivot != null ? yawPivot : transform;
+        yawWorldRot = yawT.rotation;
+        if (pitchPivot != null)
+        {
+            pitchLocalRot = pitchPivot.localRotation;
+            hasPitch = true;
+        }
+        else
+        {
+            pitchLocalRot = Quaternion.identity;
+            hasPitch = false;
+        }
+        return true;
+    }
+
+    public void ApplyAimSnapshot(Quaternion yawWorldRot, Quaternion pitchLocalRot, bool hasPitch)
+    {
+        ResolvePivots();
+        Transform yawT = yawPivot != null ? yawPivot : transform;
+        yawT.rotation = yawWorldRot;
+        if (hasPitch && pitchPivot != null)
+            pitchPivot.localRotation = pitchLocalRot;
+    }
+
     private float GetFireInterval()
     {
-        float interval = _def != null ? _def.fireInterval : 0.02f;
+        float aps = _def != null ? _def.attackSpeed : 1f;
+        if (aps <= 0f) return 9999f;
         float mul = (_scope != null) ? _scope.TowerAttackSpeedMultiplier : 1f;
-        return Mathf.Max(0.02f, interval / Mathf.Max(0.01f, mul));
+        float finalAps = Mathf.Max(0.01f, aps * Mathf.Max(0.01f, mul));
+        return 1f / finalAps;
     }
 }

@@ -9,6 +9,7 @@ public sealed class GridDataService : MonoBehaviour
     {
         public string towerId;
         public int level;
+        public int order;
     }
 
     public struct PlacementResult
@@ -39,6 +40,8 @@ public sealed class GridDataService : MonoBehaviour
     private readonly HashSet<Vector2Int> _roadCells = new();
     private readonly List<Vector2Int> _cells = new();
     private readonly List<Vector2Int> _upgradeCells = new();
+    private readonly List<GridRoadUtility.RoadTower> _roadTowers = new();
+    private int _nextOrder;
 
     public IReadOnlyDictionary<Vector3Int, TowerData> Data => _data;
     public Grid WorldGrid => worldGrid;
@@ -52,12 +55,14 @@ public sealed class GridDataService : MonoBehaviour
         if (worldGrid == null && scope != null) worldGrid = scope.GetComponent<Grid>();
         BuildDefinitionCache();
         EnsureWorldGridSync();
+        ResetOrder();
     }
 
     private void Awake()
     {
         BuildDefinitionCache();
         EnsureWorldGridSync();
+        ResetOrder();
     }
 
     public bool TryGet(Vector3Int cell, out TowerData data) => _data.TryGetValue(cell, out data);
@@ -66,6 +71,28 @@ public sealed class GridDataService : MonoBehaviour
     {
         BuildDefinitionCache();
         return _defsById.TryGetValue(towerId, out def);
+    }
+
+    public void CollectRoadTowers(List<GridRoadUtility.RoadTower> results)
+    {
+        if (results == null) return;
+        results.Clear();
+        if (_data.Count == 0) return;
+
+        foreach (var kvp in _data)
+        {
+            if (!TryGetDefinition(kvp.Value.towerId, out TowerDefinitionSO def)) continue;
+            Vector2Int anchor = ToCell2D(kvp.Key);
+            results.Add(new GridRoadUtility.RoadTower(anchor, def, kvp.Value.order));
+        }
+
+        results.Sort((a, b) =>
+        {
+            int o = a.Order.CompareTo(b.Order);
+            if (o != 0) return o;
+            int x = a.Anchor.x.CompareTo(b.Anchor.x);
+            return x != 0 ? x : a.Anchor.y.CompareTo(b.Anchor.y);
+        });
     }
 
     public Vector3Int GetAnchorCell()
@@ -82,6 +109,7 @@ public sealed class GridDataService : MonoBehaviour
     public void ClearAll()
     {
         _data.Clear();
+        ResetOrder();
         OnGridReset?.Invoke();
     }
 
@@ -140,7 +168,7 @@ public sealed class GridDataService : MonoBehaviour
         if (def == null || string.IsNullOrEmpty(def.id)) return false;
         if (_data.ContainsKey(cell)) return false;
 
-        _data[cell] = new TowerData { towerId = def.id, level = 1 };
+        _data[cell] = new TowerData { towerId = def.id, level = 1, order = _nextOrder++ };
         OnDataChanged?.Invoke(cell);
         return true;
     }
@@ -224,8 +252,8 @@ public sealed class GridDataService : MonoBehaviour
         _roadCells.Clear();
         if (gridSystem == null) return;
 
-        IReadOnlyList<TowerEntity> towers = _scope != null && _scope.Entities != null ? _scope.Entities.Towers : null;
-        GridRoadUtility.BuildRoadCells(gridSystem, GetAnchorCell2D(), baseFootprint, towers, _roadCells);
+        CollectRoadTowers(_roadTowers);
+        GridRoadUtility.BuildRoadCells(gridSystem, GetAnchorCell2D(), baseFootprint, _roadTowers, _roadCells);
     }
 
     private void BuildDefinitionCache()
@@ -283,6 +311,18 @@ public sealed class GridDataService : MonoBehaviour
         GridWorldSync sync = worldGrid.GetComponent<GridWorldSync>();
         if (sync == null) sync = worldGrid.gameObject.AddComponent<GridWorldSync>();
         sync.Configure(gridSystem, worldGrid);
+    }
+
+    private void ResetOrder()
+    {
+        _nextOrder = 0;
+        if (_data.Count == 0) return;
+
+        foreach (var kvp in _data)
+        {
+            if (kvp.Value.order >= _nextOrder)
+                _nextOrder = kvp.Value.order + 1;
+        }
     }
 
     private static bool ListContainsCell(List<Vector2Int> cells, Vector2Int cell)

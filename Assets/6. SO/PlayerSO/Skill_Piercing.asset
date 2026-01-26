@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6329be501ed374040a75d051606e7427, type: 3}
+  m_Name: Skill_Piercing
+  m_EditorClassIdentifier: 
+  id: skill_piercing
+  displayName: "\uAC80\uAE30"
+  icon: {fileID: 21300000, guid: 36adb50da1b38b340a0fdbff9c679f42, type: 3}
+  description: "\uAC80\uAE30\uB97C \uBC1C\uC0AC\uD574 \uAD00\uD1B5 \uD53C\uD574\uB97C
+    \uC90D\uB2C8\uB2E4."
+  baseDamage: 18
+  baseAttackSpeed: 1.2
+  baseRange: 6
+  castSfx: {fileID: 8300000, guid: 4c931f7edd3f3db4baeb30e73d3d16ec, type: 3}
+  castSfxVolume: 0.186

@@ -66,6 +66,34 @@ public sealed class PickupTrain : MonoBehaviour
         }
     }
 
+    private void OnEnable()
+    {
+        _depositing = false;
+        _autoDepositCooldown = 0f;
+        _items.Clear();
+        _trail.Clear();
+        _trail.Add(transform.position);
+        _lastRecorded = transform.position;
+        _prevPos = transform.position;
+        _move01 = 0f;
+        _wiggleT = 0f;
+
+        if (_pendingDepositItems > 0)
+        {
+            _pendingDepositItems = 0;
+            DepositAnimationChanged?.Invoke(false);
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (_pendingDepositItems > 0)
+        {
+            _pendingDepositItems = 0;
+            DepositAnimationChanged?.Invoke(false);
+        }
+    }
+
     private void LateUpdate()
     {
         if (_depositing) return;
@@ -158,7 +186,9 @@ public sealed class PickupTrain : MonoBehaviour
         if (!autoDeposit || autoDepositRange <= 0f) return false;
         if (_items.Count == 0) return false;
 
-        _autoDepositCooldown -= Time.deltaTime;
+        float dt = Time.deltaTime;
+        if (dt <= 0f) dt = Time.unscaledDeltaTime;
+        _autoDepositCooldown -= dt;
         if (_autoDepositCooldown > 0f) return false;
         _autoDepositCooldown = Mathf.Max(0.05f, autoDepositInterval);
 
@@ -230,10 +260,10 @@ public sealed class PickupTrain : MonoBehaviour
             if (stackExtraIntoLast && _items.Count > 0 && item != null)
             {
                 _items[_items.Count - 1].AddAmount(item.Amount);
-                Destroy(item.gameObject);
+                item.Despawn();
                 return;
             }
-            Destroy(item.gameObject);
+            if (item != null) item.Despawn();
             return;
         }
 
@@ -279,6 +309,7 @@ public sealed class PickupTrain : MonoBehaviour
             if (item == null) continue;
             ResourceType itemType = item.ResourceType;
             int itemAmount = item.Amount;
+            bool countSkillProgress = !(itemType == ResourceType.Stone && item.CountedOnPickup);
 
             Transform tr = item.transform;
             tr.DOKill();
@@ -311,8 +342,8 @@ public sealed class PickupTrain : MonoBehaviour
             seq.OnComplete(() =>
             {
                 if (receiver != null && itemAmount > 0)
-                    receiver.Deposit(itemType, itemAmount);
-                if (item != null) Destroy(item.gameObject);
+                    receiver.Deposit(itemType, itemAmount, countSkillProgress);
+                if (item != null) item.Despawn();
                 EndDepositAnimationItem();
             });
             seq.SetUpdate(true);

@@ -18,6 +18,9 @@ public sealed class RestStopSystem : MonoBehaviour
     [SerializeField] private bool stopPlayArea = true;
     [SerializeField] private bool stopChunks = false;
     [SerializeField] private bool freezeEnemies = true;
+    [SerializeField] private bool killEnemiesOnEnter = true;
+    [SerializeField] private int killEnemiesDamage = 50000;
+    [SerializeField] private float houseStopDistance = 0.1f;
 
     private RunScope _scope;
     private bool _isResting;
@@ -29,6 +32,8 @@ public sealed class RestStopSystem : MonoBehaviour
     private bool _chunksPrev;
 
     private readonly HashSet<EnemyBrain> _pausedBrains = new();
+    private Transform _houseStopTarget;
+    private bool _waitForHouseStop;
 
     public bool IsResting => _isResting;
     public event System.Action<bool> RestStateChanged;
@@ -38,22 +43,34 @@ public sealed class RestStopSystem : MonoBehaviour
         ResolveRefs();
     }
 
-    public void EnterRestStop()
+    public void EnterRestStop(Transform houseStopTarget = null)
     {
         if (_isResting) return;
         _isResting = true;
         ResolveRefs();
         CaptureStates();
-        ApplyResting(true);
+        _houseStopTarget = houseStopTarget;
+        _waitForHouseStop = stopHouseDrift && houseStopTarget != null;
+        ApplyResting(true, _waitForHouseStop);
         RestStateChanged?.Invoke(true);
+        if (killEnemiesOnEnter)
+            KillEnemies();
     }
 
     public void ExitRestStop()
     {
         if (!_isResting) return;
         _isResting = false;
+        _waitForHouseStop = false;
+        _houseStopTarget = null;
         ApplyResting(false);
         RestStateChanged?.Invoke(false);
+    }
+
+    private void Update()
+    {
+        if (!_isResting || !_waitForHouseStop) return;
+        TryStopHouseAtTarget();
     }
 
     private void ResolveRefs()
@@ -75,11 +92,11 @@ public sealed class RestStopSystem : MonoBehaviour
         _chunksPrev = chunks != null && chunks.enabled;
     }
 
-    private void ApplyResting(bool on)
+    private void ApplyResting(bool on, bool deferHouseStop = false)
     {
         if (on)
         {
-            if (stopHouseDrift && houseDrift != null) houseDrift.enabled = false;
+            if (stopHouseDrift && !deferHouseStop && houseDrift != null) houseDrift.enabled = false;
             if (stopWorldScroller && worldScroller != null) worldScroller.enabled = false;
             if (stopSpawner && spawner != null) spawner.enabled = false;
             if (stopPlayArea && playArea != null) playArea.enabled = false;
@@ -132,6 +149,59 @@ public sealed class RestStopSystem : MonoBehaviour
         {
             if (brain != null) brain.enabled = true;
         }
+        _pausedBrains.Clear();
+    }
+
+    private void TryStopHouseAtTarget()
+    {
+        if (houseDrift == null)
+        {
+            _waitForHouseStop = false;
+            return;
+        }
+
+        if (_houseStopTarget == null)
+        {
+            houseDrift.enabled = false;
+            _waitForHouseStop = false;
+            return;
+        }
+
+        Vector3 forward = houseDrift.Direction;
+        if (forward.sqrMagnitude <= 0.0001f)
+        {
+            if (Vector3.Distance(houseDrift.transform.position, _houseStopTarget.position) <= houseStopDistance)
+            {
+                houseDrift.enabled = false;
+                _waitForHouseStop = false;
+            }
+            return;
+        }
+
+        forward.Normalize();
+        float dot = Vector3.Dot(_houseStopTarget.position - houseDrift.transform.position, forward);
+        if (dot <= houseStopDistance)
+        {
+            houseDrift.enabled = false;
+            _waitForHouseStop = false;
+        }
+    }
+
+    private void KillEnemies()
+    {
+        if (killEnemiesDamage <= 0) return;
+
+        var scope = _scope != null ? _scope : RunScopeLocator.Current;
+        var enemies = scope?.Entities?.Enemies;
+        if (enemies == null) return;
+
+        for (int i = enemies.Count - 1; i >= 0; i--)
+        {
+            var e = enemies[i];
+            if (e == null) continue;
+            e.ApplyDamageNoDrop(killEnemiesDamage);
+        }
+
         _pausedBrains.Clear();
     }
 }

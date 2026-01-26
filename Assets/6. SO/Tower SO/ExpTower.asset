@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd848319bbbd81749bda7f6c15ab82a1, type: 3}
+  m_Name: ExpTower
+  m_EditorClassIdentifier: 
+  id: ExpTower
+  displayName: "\uC815\uD654\uB41C \uB465\uC9C0"
+  icon: {fileID: 145262274, guid: 7d4a2005fc6b25e4c9d21e57f5dc46de, type: 3}
+  preview: {fileID: 0}
+  description: "6% \uACBD\uD5D8\uCE58\uB97C \uCD94\uAC00 \uD68D\uB4DD\uD569\uB2C8\uB2E4!"
+  unlockBaseLevel: 1
+  prefab: {fileID: 7040495758813982458, guid: 86af62a4c80670c42ab3bf46ea46e472, type: 3}
+  footprint: {x: 1, y: 1}
+  footprintMask: {fileID: 11400000, guid: 02d76eff3c6191e4ca27662bb87dad0f, type: 2}
+  cost: 0
+  upgradeNext: {fileID: 0}
+  range: 0
+  attackSpeed: 0
+  damage: 0
+  knockback: 0
+  fireSfx: {fileID: 0}
+  fireSfxVolume: 1
+  passiveExpGainBonus: 0.06
+  passiveTowerDamageBonus: 0
+  passiveTowerAttackSpeedBonus: 0
+  projectilePrefab: {fileID: 0}
+  projectileSpeed: 0
+  projectileLifeTime: 0
+  hitEffect:
+    effectType: 0
+    overridePrefabEffects: 0
+    slowMultiplier: 0.05
+    slowDuration: 0
+    aoeRadius: 0
+    aoeDamageMultiplier: 0
+    aoeDamageOverride: 0
+    aoeIncludeDirectTarget: 0

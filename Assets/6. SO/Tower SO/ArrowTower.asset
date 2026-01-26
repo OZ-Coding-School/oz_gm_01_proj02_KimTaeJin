@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd848319bbbd81749bda7f6c15ab82a1, type: 3}
+  m_Name: ArrowTower
+  m_EditorClassIdentifier: 
+  id: ArrowTower
+  displayName: "\uC2E0\uC131\uD3EC"
+  icon: {fileID: 1288413328, guid: b617dab6d78164d4a8e524386f953f59, type: 3}
+  preview: {fileID: 0}
+  description: "\uBE60\uB978 \uC5F0\uC0AC\uD3EC\uD0D1\uC785\uB2C8\uB2E4!"
+  unlockBaseLevel: 5
+  prefab: {fileID: 5162993927105836200, guid: c5b91677a32d9f143ae0d45624d8e2a3, type: 3}
+  footprint: {x: 1, y: 1}
+  footprintMask: {fileID: 11400000, guid: 02d76eff3c6191e4ca27662bb87dad0f, type: 2}
+  cost: 0
+  upgradeNext: {fileID: 11400000, guid: 7614c9d8ee5832e418dbe040b60c601c, type: 2}
+  range: 20
+  attackSpeed: 4
+  damage: 6
+  knockback: 0.5
+  fireSfx: {fileID: 8300000, guid: 16a2a4443368ae84790ee24eb04c9f63, type: 3}
+  fireSfxVolume: 0.166
+  passiveExpGainBonus: 0
+  passiveTowerDamageBonus: 0
+  passiveTowerAttackSpeedBonus: 0
+  projectilePrefab: {fileID: 3916666564010246655, guid: fc705df192550d746814c2eaeb459253,
+    type: 3}
+  projectileSpeed: 50
+  projectileLifeTime: 2
+  hitEffect:
+    effectType: 0
+    overridePrefabEffects: 0
+    slowMultiplier: 0.05
+    slowDuration: 0
+    aoeRadius: 0
+    aoeDamageMultiplier: 0
+    aoeDamageOverride: 0
+    aoeIncludeDirectTarget: 0

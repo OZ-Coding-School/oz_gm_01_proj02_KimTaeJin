@@ -6,10 +6,15 @@ public sealed class SharedBuildingHealthBinder : MonoBehaviour
     [Header("Refs")]
     [SerializeField] private SharedBuildingHealth sharedHealth;
     [SerializeField] private Transform centerRoot;
+    [SerializeField] private Transform roadRoot;
 
     [Header("Tuning")]
+    [SerializeField] private bool autoCreateSharedHealth = true;
     [SerializeField] private bool bindCenter = true;
     [SerializeField] private bool bindTowers = true;
+    [SerializeField] private bool bindRoadTiles = true;
+    [SerializeField] private string roadRootName = "[GridRoadTiles]";
+    [SerializeField] private string roadTilePrefix = "RoadTile_";
     [SerializeField] private float refreshInterval = 0.25f;
 
     private RunScope _scope;
@@ -40,6 +45,8 @@ public sealed class SharedBuildingHealthBinder : MonoBehaviour
             sharedHealth = GetComponent<SharedBuildingHealth>();
             if (sharedHealth == null && _scope != null)
                 sharedHealth = _scope.GetComponent<SharedBuildingHealth>();
+            if (sharedHealth == null && autoCreateSharedHealth && _scope != null)
+                sharedHealth = _scope.gameObject.AddComponent<SharedBuildingHealth>();
         }
 
         if (centerRoot == null && _scope != null && _scope.Grid != null)
@@ -73,6 +80,15 @@ public sealed class SharedBuildingHealthBinder : MonoBehaviour
                 EnsureProxy(tower.transform);
             }
         }
+
+        if (bindRoadTiles)
+        {
+            if (roadRoot == null)
+                roadRoot = ResolveRoadRoot();
+
+            if (roadRoot != null)
+                EnsureRoadTileProxies(roadRoot);
+        }
     }
 
     private void EnsureProxy(Transform target)
@@ -82,5 +98,40 @@ public sealed class SharedBuildingHealthBinder : MonoBehaviour
         if (proxy == null)
             proxy = target.gameObject.AddComponent<SharedBuildingHealthProxy>();
         proxy.SetShared(sharedHealth);
+    }
+
+    private Transform ResolveRoadRoot()
+    {
+        if (roadRoot != null) return roadRoot;
+
+        if (_scope != null && _scope.Grid != null && _scope.Grid.Anchor != null)
+        {
+            var found = _scope.Grid.Anchor.Find(roadRootName);
+            if (found != null) return found;
+        }
+
+        var system = FindObjectOfType<GridRoadSystem>();
+        if (system != null)
+        {
+            var found = system.transform.Find(roadRootName);
+            if (found != null) return found;
+        }
+
+        return null;
+    }
+
+    private void EnsureRoadTileProxies(Transform root)
+    {
+        if (root == null) return;
+
+        int childCount = root.childCount;
+        for (int i = 0; i < childCount; i++)
+        {
+            var child = root.GetChild(i);
+            if (child == null) continue;
+            if (!string.IsNullOrEmpty(roadTilePrefix) && !child.name.StartsWith(roadTilePrefix))
+                continue;
+            EnsureProxy(child);
+        }
     }
 }

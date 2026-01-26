@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -6,6 +7,7 @@ public sealed class GridRoadSystem : MonoBehaviour
 {
     [Header("Refs")]
     [SerializeField] private GridSystem grid;
+    [SerializeField] private GridDataService gridData;
     [SerializeField] private BaseFootprintReserver baseFootprint;
     [SerializeField] private GameObject roadTilePrefab;
     [SerializeField] private Transform roadRoot;
@@ -36,6 +38,7 @@ public sealed class GridRoadSystem : MonoBehaviour
     private readonly HashSet<Vector2Int> _roadCells = new();
     private readonly Dictionary<Vector2Int, GameObject> _instances = new();
     private readonly List<Vector2Int> _remove = new();
+    private readonly List<GridRoadUtility.RoadTower> _roadTowers = new();
 
     private void OnEnable()
     {
@@ -61,6 +64,7 @@ public sealed class GridRoadSystem : MonoBehaviour
         if (_scope == null) return;
 
         if (grid == null) grid = _scope.Grid;
+        if (gridData == null) gridData = _scope.GridData;
         if (baseFootprint == null) baseFootprint = _scope.BaseFootprintReserver;
 
         _timer = 0f;
@@ -109,6 +113,22 @@ public sealed class GridRoadSystem : MonoBehaviour
         hash = hash * 31 + grid.Width;
         hash = hash * 31 + grid.Height;
 
+        if (gridData != null)
+        {
+            int acc = 0;
+            foreach (var kvp in gridData.Data)
+            {
+                int h = kvp.Key.GetHashCode();
+                string id = kvp.Value.towerId;
+                if (!string.IsNullOrEmpty(id))
+                    h = h * 31 + StringComparer.Ordinal.GetHashCode(id);
+                acc ^= h;
+            }
+            hash = hash * 31 + acc;
+            hash = hash * 31 + gridData.Data.Count;
+            return hash;
+        }
+
         var towers = _scope.Entities != null ? _scope.Entities.Towers : null;
         if (towers != null)
         {
@@ -116,7 +136,10 @@ public sealed class GridRoadSystem : MonoBehaviour
             {
                 var t = towers[i];
                 if (t == null) continue;
-                hash = hash * 31 + t.Cell.GetHashCode();
+                int h = t.Cell.GetHashCode();
+                if (t.Definition != null && !string.IsNullOrEmpty(t.Definition.id))
+                    h = h * 31 + StringComparer.Ordinal.GetHashCode(t.Definition.id);
+                hash = hash * 31 + h;
             }
         }
 
@@ -133,8 +156,16 @@ public sealed class GridRoadSystem : MonoBehaviour
     private void RebuildRoads()
     {
         _roadCells.Clear();
-        var towers = _scope.Entities != null ? _scope.Entities.Towers : null;
-        GridRoadUtility.BuildRoadCells(grid, GetCenterCell(), baseFootprint, towers, _roadCells);
+        if (gridData != null)
+        {
+            gridData.CollectRoadTowers(_roadTowers);
+            GridRoadUtility.BuildRoadCells(grid, GetCenterCell(), baseFootprint, _roadTowers, _roadCells);
+        }
+        else
+        {
+            var towers = _scope.Entities != null ? _scope.Entities.Towers : null;
+            GridRoadUtility.BuildRoadCells(grid, GetCenterCell(), baseFootprint, towers, _roadCells);
+        }
         SyncRoadTiles();
     }
 

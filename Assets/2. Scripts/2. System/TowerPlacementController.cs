@@ -66,11 +66,14 @@ public sealed class TowerPlacementController : MonoBehaviour
         if (Input.GetKeyDown(downKey)) { cell += new Vector3Int(0, 0, -1); moved = true; usedKeyboard = true; }
         if (Input.GetKeyDown(leftKey)) { cell += new Vector3Int(-1, 0, 0); moved = true; usedKeyboard = true; }
         if (Input.GetKeyDown(rightKey)) { cell += new Vector3Int(1, 0, 0); moved = true; usedKeyboard = true; }
-        if (usedKeyboard) _useMouse = false;
-        if (usedKeyboard) _lastSource = CellSource.Keyboard;
-
         Vector2 mousePos = Input.mousePosition;
-        if ((mousePos - _lastMousePos).sqrMagnitude > 1f)
+        if (usedKeyboard)
+        {
+            _useMouse = false;
+            _lastSource = CellSource.Keyboard;
+            _lastMousePos = mousePos;
+        }
+        else if ((mousePos - _lastMousePos).sqrMagnitude > 1f)
         {
             _useMouse = true;
             _lastMousePos = mousePos;
@@ -137,6 +140,10 @@ public sealed class TowerPlacementController : MonoBehaviour
         if (!_placing || _selected == null || dataService == null) return;
         bool ok = dataService.TryApplyPlacement(_selected, _currentCell, out _);
         OnPlacementConfirmed?.Invoke(ok);
+        if (ok)
+            GameAudio.Instance?.PlayTowerPlaceConfirm();
+        else
+            GameAudio.Instance?.PlayTowerPlaceBlocked();
     }
 
     private bool TryGetMouseCell(out Vector3Int cell)

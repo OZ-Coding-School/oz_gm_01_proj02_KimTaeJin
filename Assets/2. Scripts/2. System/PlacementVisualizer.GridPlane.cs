@@ -283,10 +283,18 @@ public sealed partial class PlacementVisualizer : MonoBehaviour
         if (needRoadCells)
         {
             RunScope resolvedScope = scope != null ? scope : RunScopeLocator.Current;
-            IReadOnlyList<TowerEntity> towers = resolvedScope != null && resolvedScope.Entities != null ? resolvedScope.Entities.Towers : null;
             BaseFootprintReserver baseFootprint = resolvedScope != null ? resolvedScope.BaseFootprintReserver : null;
             Vector2Int anchor = dataService != null ? ToCell2D(dataService.GetAnchorCell()) : Vector2Int.zero;
-            GridRoadUtility.BuildRoadCells(gridSystem, anchor, baseFootprint, towers, _roadCells);
+            if (dataService != null)
+            {
+                dataService.CollectRoadTowers(_roadTowerBuffer);
+                GridRoadUtility.BuildRoadCells(gridSystem, anchor, baseFootprint, _roadTowerBuffer, _roadCells);
+            }
+            else
+            {
+                IReadOnlyList<TowerEntity> towers = resolvedScope != null && resolvedScope.Entities != null ? resolvedScope.Entities.Towers : null;
+                GridRoadUtility.BuildRoadCells(gridSystem, anchor, baseFootprint, towers, _roadCells);
+            }
         }
 
         if (showBuildableOverlay)

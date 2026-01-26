@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public sealed class Projectile : MonoBehaviour
@@ -41,6 +42,12 @@ public sealed class Projectile : MonoBehaviour
     private ParticleSystem[] _ps;
     private TrailRenderer[] _trs;
     private Renderer[] _renderers;
+    private IProjectileHitEffect[] _hitEffects;
+    private ProjectileHitEffectConfig _hitEffectConfig;
+    private bool _overrideHitEffects;
+    private static readonly Collider[] _aoeOverlaps = new Collider[32];
+    private static readonly HashSet<EnemyEntity> _aoeTargets = new();
+    private static readonly HashSet<Harvestable> _aoeHarvestTargets = new();
 
     private void Awake()
     {
@@ -49,18 +56,18 @@ public sealed class Projectile : MonoBehaviour
         _ps = vfxRoot.GetComponentsInChildren<ParticleSystem>(true);
         _trs = vfxRoot.GetComponentsInChildren<TrailRenderer>(true);
         _renderers = vfxRoot.GetComponentsInChildren<Renderer>(true);
+        _hitEffects = GetComponents<IProjectileHitEffect>();
     }
 
     public void Launch(
-    RunScope scope,
-    GameObject prefabKey,  
-    Vector3 dir,
-    int dmg,
-    float speed,
-    float life,
-    float knockback)
-
-
+        RunScope scope,
+        GameObject prefabKey,
+        Vector3 dir,
+        int dmg,
+        float speed,
+        float life,
+        float knockback,
+        ProjectileHitEffectConfig hitEffect)
     {
         _scope = scope;
         _prefabKey = prefabKey;
@@ -70,6 +77,8 @@ public sealed class Projectile : MonoBehaviour
         _speed = speed;
         _life = life;
         _knockback = knockback;
+        _hitEffectConfig = hitEffect;
+        _overrideHitEffects = hitEffect.overridePrefabEffects;
 
         _alive = true;
         _dying = false;
@@ -132,6 +141,14 @@ public sealed class Projectile : MonoBehaviour
 
                     if (_knockback > 0f)
                         _scope.Combat.Knockback(enemy, hit.point - _dir, _knockback);
+
+                    ApplyHitEffects(enemy, hit.point, _damage);
+                }
+
+                var harvestable = hit.collider.GetComponentInParent<Harvestable>();
+                if (harvestable != null)
+                {
+                    harvestable.TakeHit(_damage, hit.point);
                 }
 
                 // hit vfx
@@ -257,5 +274,107 @@ public sealed class Projectile : MonoBehaviour
         }
 
         Destroy(go, Mathf.Clamp(t, 0.2f, 5f));
+    }
+
+    private void ApplyHitEffects(EnemyEntity enemy, Vector3 hitPoint, int baseDamage)
+    {
+        if (!_overrideHitEffects && _hitEffects != null && _hitEffects.Length > 0)
+        {
+            for (int i = 0; i < _hitEffects.Length; i++)
+            {
+                var effect = _hitEffects[i];
+                if (effect == null) continue;
+                effect.OnProjectileHit(_scope, enemy, hitPoint, _dir, baseDamage);
+            }
+        }
+
+        ApplyConfiguredHitEffect(enemy, hitPoint, baseDamage);
+    }
+
+    private void ApplyConfiguredHitEffect(EnemyEntity enemy, Vector3 hitPoint, int baseDamage)
+    {
+        switch (_hitEffectConfig.effectType)
+        {
+            case ProjectileHitEffectConfig.EffectType.Slow:
+                ApplySlow(enemy, _hitEffectConfig.slowMultiplier, _hitEffectConfig.slowDuration);
+                return;
+            case ProjectileHitEffectConfig.EffectType.AoeSlow:
+                ApplyAoeSlow(hitPoint, _hitEffectConfig.aoeRadius, _hitEffectConfig.slowMultiplier, _hitEffectConfig.slowDuration);
+                if (_hitEffectConfig.aoeDamageOverride > 0 || _hitEffectConfig.aoeDamageMultiplier > 0f)
+                    ApplyAoeDamage(enemy, hitPoint, baseDamage);
+                return;
+            case ProjectileHitEffectConfig.EffectType.AoeDamage:
+                ApplyAoeDamage(enemy, hitPoint, baseDamage);
+                return;
+            default:
+                return;
+        }
+    }
+
+    private static void ApplySlow(EnemyEntity enemy, float multiplier, float duration)
+    {
+        if (enemy == null) return;
+        if (duration <= 0f) return;
+        if (multiplier <= 0f) return;
+
+        var slow = enemy.GetComponent<EnemySlowEffect>();
+        if (slow == null) slow = enemy.gameObject.AddComponent<EnemySlowEffect>();
+        slow.ApplySlow(multiplier, duration);
+    }
+
+    private void ApplyAoeSlow(Vector3 hitPoint, float radius, float multiplier, float duration)
+    {
+        if (radius <= 0f) return;
+        if (duration <= 0f) return;
+        if (multiplier <= 0f) return;
+
+        int count = Physics.OverlapSphereNonAlloc(hitPoint, radius, _aoeOverlaps, hitMask, QueryTriggerInteraction.Ignore);
+        if (count <= 0) return;
+
+        _aoeTargets.Clear();
+        for (int i = 0; i < count; i++)
+        {
+            var e = _aoeOverlaps[i].GetComponentInParent<EnemyEntity>();
+            if (e != null) _aoeTargets.Add(e);
+        }
+
+        foreach (var e in _aoeTargets)
+            ApplySlow(e, multiplier, duration);
+    }
+
+    private void ApplyAoeDamage(EnemyEntity directTarget, Vector3 hitPoint, int baseDamage)
+    {
+        float radius = _hitEffectConfig.aoeRadius;
+        if (radius <= 0f) return;
+
+        int dmg = _hitEffectConfig.aoeDamageOverride > 0
+            ? _hitEffectConfig.aoeDamageOverride
+            : Mathf.Max(0, Mathf.RoundToInt(baseDamage * Mathf.Max(0f, _hitEffectConfig.aoeDamageMultiplier)));
+        if (dmg <= 0) return;
+
+        int count = Physics.OverlapSphereNonAlloc(hitPoint, radius, _aoeOverlaps, hitMask, QueryTriggerInteraction.Ignore);
+        if (count <= 0) return;
+
+        _aoeTargets.Clear();
+        _aoeHarvestTargets.Clear();
+        for (int i = 0; i < count; i++)
+        {
+            var e = _aoeOverlaps[i].GetComponentInParent<EnemyEntity>();
+            if (e == null) continue;
+            if (!_hitEffectConfig.aoeIncludeDirectTarget && e == directTarget) continue;
+            _aoeTargets.Add(e);
+        }
+
+        foreach (var e in _aoeTargets)
+            _scope.Combat.DealDamage(e, dmg);
+
+        for (int i = 0; i < count; i++)
+        {
+            var h = _aoeOverlaps[i].GetComponentInParent<Harvestable>();
+            if (h != null) _aoeHarvestTargets.Add(h);
+        }
+
+        foreach (var h in _aoeHarvestTargets)
+            h.TakeHit(dmg, hitPoint);
     }
 }

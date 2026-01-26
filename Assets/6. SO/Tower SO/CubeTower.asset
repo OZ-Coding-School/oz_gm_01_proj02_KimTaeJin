@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd848319bbbd81749bda7f6c15ab82a1, type: 3}
+  m_Name: CubeTower
+  m_EditorClassIdentifier: 
+  id: CubeTower
+  displayName: "\uD5E4\uBE44\uC874"
+  icon: {fileID: -810793693, guid: 7d4a2005fc6b25e4c9d21e57f5dc46de, type: 3}
+  preview: {fileID: 0}
+  description: "\uAD11\uBC94\uC704\uC758 \uC801\uC5D0\uAC8C \uD070 \uB370\uBBF8\uC9C0\uC640\n\uB109\uBC31\uC744
+    \uC785\uD799\uB2C8\uB2E4!"
+  unlockBaseLevel: 13
+  prefab: {fileID: -7068978532241817654, guid: 1af93ea00fa31a4479c440444c7d4cd6, type: 3}
+  footprint: {x: 1, y: 1}
+  footprintMask: {fileID: 11400000, guid: 02d76eff3c6191e4ca27662bb87dad0f, type: 2}
+  cost: 0
+  upgradeNext: {fileID: 11400000, guid: 52ea6db76a38aab459060d5705cbf674, type: 2}
+  range: 40
+  attackSpeed: 0.4
+  damage: 45
+  knockback: 2
+  fireSfx: {fileID: 8300000, guid: 5e4fb454da262d249b9af260bfce6dec, type: 3}
+  fireSfxVolume: 0.311
+  passiveExpGainBonus: 0
+  passiveTowerDamageBonus: 0
+  passiveTowerAttackSpeedBonus: 0
+  projectilePrefab: {fileID: 4314212056536583358, guid: 81bb33510d4b9b8498aaee2982ad6183,
+    type: 3}
+  projectileSpeed: 40
+  projectileLifeTime: 2
+  hitEffect:
+    effectType: 3
+    overridePrefabEffects: 0
+    slowMultiplier: 0.05
+    slowDuration: 0
+    aoeRadius: 8
+    aoeDamageMultiplier: 1
+    aoeDamageOverride: 0
+    aoeIncludeDirectTarget: 0

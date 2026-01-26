@@ -23,6 +23,9 @@ public sealed class ResourceProgressHUD : MonoBehaviour
     [SerializeField] private TMP_Text stoneLevelText;
     [SerializeField] private string stoneCountFormat = "{0}";
     [SerializeField] private string stoneLevelFormat = "Stone Lv.{0}";
+    [SerializeField] private bool useStoneCountTween = true;
+    [SerializeField] private float stoneCountTweenDuration = 0.35f;
+    [SerializeField] private Ease stoneCountTweenEase = Ease.OutExpo;
 
     [Header("Tuning")]
     [SerializeField] private bool clampFill01 = true;
@@ -31,6 +34,10 @@ public sealed class ResourceProgressHUD : MonoBehaviour
     [SerializeField] private Ease expFillTweenEase = Ease.OutExpo;
     [SerializeField] private float expLevelDropDuration = 0.08f;
     [SerializeField] private float expLevelHoldDuration = 0.04f;
+
+    [Header("Panels")]
+    [SerializeField] private bool hideExpBarOnSkillMenu = true;
+    [SerializeField] private SkillMenuPanel skillMenuPanel;
 
     private RunScope _scope;
     private ResourceProgression _progression;
@@ -41,6 +48,17 @@ public sealed class ResourceProgressHUD : MonoBehaviour
     private bool _expFillInitialized;
     private bool _expLevelInitialized;
     private int _expLevel;
+    private Tween _stoneCountTween;
+    private float _stoneCountValue;
+    private bool _stoneCountInitialized;
+    private bool _buildModeOn;
+    private bool _skillMenuOn;
+
+    private void Awake()
+    {
+        DisableSliderInput(expSlider);
+        DisableSliderInput(woodSlider);
+    }
 
     private void OnEnable()
     {
@@ -79,8 +97,15 @@ public sealed class ResourceProgressHUD : MonoBehaviour
         if (_events != null)
         {
             _events.BuildModeChanged += OnBuildModeChanged;
-            OnBuildModeChanged(_events.IsBuildMode);
+            _buildModeOn = _events.IsBuildMode;
         }
+        else
+        {
+            _buildModeOn = false;
+        }
+
+        BindSkillMenu();
+        UpdateExpBarVisibility();
 
         OnBaseExpChanged(_progression.BaseLevel, _progression.BaseExp, _progression.BaseExpToLevel);
         OnWoodProgressChanged(_progression.WoodLevel, _progression.WoodStored, _progression.WoodPerLevel);
@@ -99,6 +124,7 @@ public sealed class ResourceProgressHUD : MonoBehaviour
         if (_events != null)
             _events.BuildModeChanged -= OnBuildModeChanged;
 
+        UnbindSkillMenu();
         _progression = null;
         _scope = null;
         _events = null;
@@ -106,8 +132,13 @@ public sealed class ResourceProgressHUD : MonoBehaviour
         _expFillValue = 0f;
         _expLevelInitialized = false;
         _expLevel = 0;
+        _stoneCountInitialized = false;
+        _stoneCountValue = 0f;
+        _buildModeOn = false;
+        _skillMenuOn = false;
         KillExpFillTween();
         KillExpFillSequence();
+        KillStoneCountTween();
     }
 
     private void OnBaseExpChanged(int level, int exp, int expToLevel)
@@ -138,7 +169,27 @@ public sealed class ResourceProgressHUD : MonoBehaviour
     private void OnStoneCountChanged(int level, int count)
     {
         if (stoneCountText != null)
-            stoneCountText.text = string.Format(stoneCountFormat, count, level);
+        {
+            if (!useStoneCountTween || stoneCountTweenDuration <= 0f)
+            {
+                stoneCountText.text = string.Format(stoneCountFormat, count, level);
+            }
+            else if (!_stoneCountInitialized)
+            {
+                _stoneCountInitialized = true;
+                _stoneCountValue = count;
+                SetStoneCountText(Mathf.RoundToInt(_stoneCountValue), level);
+            }
+            else
+            {
+                KillStoneCountTween();
+                _stoneCountTween = DOTween.To(() => _stoneCountValue, v =>
+                {
+                    _stoneCountValue = v;
+                    SetStoneCountText(Mathf.RoundToInt(v), level);
+                }, count, stoneCountTweenDuration).SetEase(stoneCountTweenEase).SetUpdate(true);
+            }
+        }
 
         if (stoneLevelText != null)
             stoneLevelText.text = string.Format(stoneLevelFormat, level, count);
@@ -203,6 +254,13 @@ public sealed class ResourceProgressHUD : MonoBehaviour
         if (_expFillSequence == null) return;
         _expFillSequence.Kill();
         _expFillSequence = null;
+    }
+
+    private void KillStoneCountTween()
+    {
+        if (_stoneCountTween == null) return;
+        _stoneCountTween.Kill();
+        _stoneCountTween = null;
     }
 
     private void TweenExpFill(float value)
@@ -270,10 +328,46 @@ public sealed class ResourceProgressHUD : MonoBehaviour
         return slider.fillRect.GetComponent<Image>() == image;
     }
 
+    private void SetStoneCountText(int count, int level)
+    {
+        if (stoneCountText == null) return;
+        stoneCountText.text = string.Format(stoneCountFormat, count, level);
+    }
+
     private void OnBuildModeChanged(bool on)
     {
-        if (!hideExpBarOnBuildMode) return;
-        SetExpBarVisible(!on);
+        _buildModeOn = on;
+        UpdateExpBarVisibility();
+    }
+
+    private void BindSkillMenu()
+    {
+        UnbindSkillMenu();
+        if (!hideExpBarOnSkillMenu) return;
+        if (skillMenuPanel == null)
+            skillMenuPanel = FindObjectOfType<SkillMenuPanel>(true);
+        if (skillMenuPanel == null) return;
+        skillMenuPanel.OpenStateChanged += OnSkillMenuChanged;
+        _skillMenuOn = skillMenuPanel.IsOpen;
+    }
+
+    private void UnbindSkillMenu()
+    {
+        if (skillMenuPanel != null)
+            skillMenuPanel.OpenStateChanged -= OnSkillMenuChanged;
+        _skillMenuOn = false;
+    }
+
+    private void OnSkillMenuChanged(bool on)
+    {
+        _skillMenuOn = on;
+        UpdateExpBarVisibility();
+    }
+
+    private void UpdateExpBarVisibility()
+    {
+        bool hide = (hideExpBarOnBuildMode && _buildModeOn) || (hideExpBarOnSkillMenu && _skillMenuOn);
+        SetExpBarVisible(!hide);
     }
 
     private void SetExpBarVisible(bool visible)
@@ -288,5 +382,14 @@ public sealed class ResourceProgressHUD : MonoBehaviour
             expSlider.gameObject.SetActive(visible);
         if (expFill != null)
             expFill.gameObject.SetActive(visible);
+    }
+
+    private void DisableSliderInput(Slider slider)
+    {
+        if (slider == null) return;
+        slider.interactable = false;
+        var nav = slider.navigation;
+        nav.mode = Navigation.Mode.None;
+        slider.navigation = nav;
     }
 }

@@ -34,12 +34,12 @@ Transform:
   - {fileID: 884663734823735570}
   - {fileID: 7238257313254178729}
   - {fileID: 890425327876089393}
+  - {fileID: 7629734637298763376}
   - {fileID: 4432880727488515425}
   - {fileID: 7756740047682363980}
   - {fileID: 5012713665392593184}
   - {fileID: 4717193274705414809}
   - {fileID: 629843759957294557}
-  - {fileID: 7629734637298763376}
   - {fileID: 8773325143348222783}
   - {fileID: 6820537471514092173}
   m_Father: {fileID: 0}
@@ -169,9 +169,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHp: 1
+  maxDamagePerHit: 1
   dropPrefab: {fileID: 0}
   dropCount: 0
   dropScatterRadius: 0.6
+  resourceTypeOverride: 0
+  useTagFallback: 1
+  woodTag: Wood
+  stoneTag: Stone
 --- !u!114 &9149785703420343599
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -281,6 +286,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree1  (1)
       objectReference: {fileID: 0}
+    - target: {fileID: 6715275329358183230, guid: 6c50d5ea7f06f8b42833e7789b19af11,
+        type: 3}
+      propertyPath: m_TagString
+      value: Wood
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -355,6 +365,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: CommonTree_2
       objectReference: {fileID: 0}
+    - target: {fileID: 2089664457239613964, guid: 539c3ac2790801a4db2f5050ee0ec752,
+        type: 3}
+      propertyPath: m_TagString
+      value: Wood
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -378,6 +393,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: DeadTree_1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8089452358984819371, guid: a439cdaf6f04cc148a775d071b51dcff,
+        type: 3}
+      propertyPath: m_TagString
+      value: Wood
       objectReference: {fileID: 0}
     - target: {fileID: 8865426726881867793, guid: a439cdaf6f04cc148a775d071b51dcff,
         type: 3}
@@ -513,6 +533,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: 'Tree1 '
       objectReference: {fileID: 0}
+    - target: {fileID: 6715275329358183230, guid: 6c50d5ea7f06f8b42833e7789b19af11,
+        type: 3}
+      propertyPath: m_TagString
+      value: Wood
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -536,6 +561,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: CommonTree_4
+      objectReference: {fileID: 0}
+    - target: {fileID: 3563637716650526391, guid: 80bd7696d666401418d872a125d10d8d,
+        type: 3}
+      propertyPath: m_TagString
+      value: Wood
       objectReference: {fileID: 0}
     - target: {fileID: 4197149466493705229, guid: 80bd7696d666401418d872a125d10d8d,
         type: 3}
@@ -723,9 +753,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHp: 1
+  maxDamagePerHit: 1
   dropPrefab: {fileID: 0}
   dropCount: 0
   dropScatterRadius: 0.6
+  resourceTypeOverride: 0
+  useTagFallback: 1
+  woodTag: Wood
+  stoneTag: Stone
 --- !u!114 &819825126433796789
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -903,9 +938,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHp: 1
+  maxDamagePerHit: 1
   dropPrefab: {fileID: 0}
   dropCount: 0
   dropScatterRadius: 0.6
+  resourceTypeOverride: 0
+  useTagFallback: 1
+  woodTag: Wood
+  stoneTag: Stone
 --- !u!114 &6290816605861664351
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1077,9 +1117,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHp: 1
+  maxDamagePerHit: 1
   dropPrefab: {fileID: 0}
   dropCount: 0
   dropScatterRadius: 0.6
+  resourceTypeOverride: 0
+  useTagFallback: 1
+  woodTag: Wood
+  stoneTag: Stone
 --- !u!114 &7150780152786085139
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1132,6 +1177,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: CommonTree_4
+      objectReference: {fileID: 0}
+    - target: {fileID: 3563637716650526391, guid: 80bd7696d666401418d872a125d10d8d,
+        type: 3}
+      propertyPath: m_TagString
+      value: Wood
       objectReference: {fileID: 0}
     - target: {fileID: 4197149466493705229, guid: 80bd7696d666401418d872a125d10d8d,
         type: 3}
@@ -1335,9 +1385,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHp: 1
+  maxDamagePerHit: 1
   dropPrefab: {fileID: 0}
   dropCount: 0
   dropScatterRadius: 0.6
+  resourceTypeOverride: 0
+  useTagFallback: 1
+  woodTag: Wood
+  stoneTag: Stone
 --- !u!64 &2244682948050966331
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -1491,9 +1546,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHp: 1
+  maxDamagePerHit: 1
   dropPrefab: {fileID: 0}
   dropCount: 0
   dropScatterRadius: 0.6
+  resourceTypeOverride: 0
+  useTagFallback: 1
+  woodTag: Wood
+  stoneTag: Stone
 --- !u!114 &3803838530338526096
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1676,9 +1736,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHp: 1
+  maxDamagePerHit: 1
   dropPrefab: {fileID: 0}
   dropCount: 0
   dropScatterRadius: 0.6
+  resourceTypeOverride: 0
+  useTagFallback: 1
+  woodTag: Wood
+  stoneTag: Stone
 --- !u!64 &6298450180766156676
 MeshCollider:
   m_ObjectHideFlags: 0

@@ -13,20 +13,35 @@ MonoBehaviour:
   m_Name: FireTower
   m_EditorClassIdentifier: 
   id: FireTower
-  displayName: Fire Tower I
-  icon: {fileID: 21300000, guid: 2261ebedceeade240833d0ef9a65e6da, type: 3}
+  displayName: "\uACE0\uC5F4\uD3EC"
+  icon: {fileID: 515852116, guid: 7d4a2005fc6b25e4c9d21e57f5dc46de, type: 3}
   preview: {fileID: 0}
-  description: Shoot Fire
+  description: "\uAC15\uB825\uD55C \uD654\uC5FC \uD3EC\uD0D1\uC785\uB2C8\uB2E4!"
+  unlockBaseLevel: 1
   prefab: {fileID: 7524775083283482169, guid: 6bdd11a4b5d56914aa120ba76280b7a4, type: 3}
   footprint: {x: 1, y: 1}
   footprintMask: {fileID: 11400000, guid: 02d76eff3c6191e4ca27662bb87dad0f, type: 2}
   cost: 0
   upgradeNext: {fileID: 11400000, guid: ccc2d0c4c6ccbdb4aad04d9576fe7d0c, type: 2}
-  range: 15
-  fireInterval: 0.5
+  range: 22
+  attackSpeed: 1.5
   damage: 20
   knockback: 1
+  fireSfx: {fileID: 8300000, guid: 3175d0e66ecf9984799a906b8d3cea62, type: 3}
+  fireSfxVolume: 0.321
+  passiveExpGainBonus: 0
+  passiveTowerDamageBonus: 0
+  passiveTowerAttackSpeedBonus: 0
   projectilePrefab: {fileID: 5733162599812708132, guid: 38bf2ff592c3f0a4e92af108436cc3e4,
     type: 3}
   projectileSpeed: 30
   projectileLifeTime: 2
+  hitEffect:
+    effectType: 0
+    overridePrefabEffects: 0
+    slowMultiplier: 0.05
+    slowDuration: 0
+    aoeRadius: 0
+    aoeDamageMultiplier: 0
+    aoeDamageOverride: 0
+    aoeIncludeDirectTarget: 0

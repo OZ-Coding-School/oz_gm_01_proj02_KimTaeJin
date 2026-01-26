@@ -3,15 +3,29 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class SharedBuildingHealthProxy : MonoBehaviour
 {
+    private static readonly System.Collections.Generic.List<SharedBuildingHealthProxy> _active = new();
+
     [SerializeField] private SharedBuildingHealth sharedHealth;
     [SerializeField] private bool autoFindShared = true;
 
     public SharedBuildingHealth SharedHealth => sharedHealth;
+    public static System.Collections.Generic.IReadOnlyList<SharedBuildingHealthProxy> Active => _active;
 
     private void Awake()
     {
         if (autoFindShared && sharedHealth == null)
             ResolveShared();
+    }
+
+    private void OnEnable()
+    {
+        if (!_active.Contains(this))
+            _active.Add(this);
+    }
+
+    private void OnDisable()
+    {
+        _active.Remove(this);
     }
 
     public void SetShared(SharedBuildingHealth shared)
@@ -25,6 +39,7 @@ public sealed class SharedBuildingHealthProxy : MonoBehaviour
             ResolveShared();
         if (sharedHealth == null) return;
         sharedHealth.ApplyDamage(amount);
+        DamageNumberService.TryShow(amount, transform.position);
     }
 
     public void Heal(int amount)

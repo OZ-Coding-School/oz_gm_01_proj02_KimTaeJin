@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 67d3f14ccdfd66f44b7489353e6f14b9, type: 3}
+  m_Name: SkillOption_Piercing_Upgrade_1
+  m_EditorClassIdentifier: 
+  id: skill_option_piercing_up1
+  displayName: "\uAC80\uAE30 (\uC704\uB825)+"
+  icon: {fileID: -2102032947, guid: a75f9845899df5a4b84aa33833a08b05, type: 3}
+  description: "\uD30C\uAD34\uB825\uACFC \uC18C\uB7C9\uC758 \uC18D\uB3C4\uB97C \uAC15\uD654\uD569\uB2C8\uB2E4"
+  optionType: 1
+  targetSkill: {fileID: 11400000, guid: 82793cbfad57442ebf80b0e90642cc44, type: 2}
+  damageDelta: 8
+  attackSpeedDelta: 0.3
+  rangeDelta: 0
+  levelDelta: 1

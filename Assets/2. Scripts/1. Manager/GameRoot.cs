@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public sealed class GameRoot : MonoBehaviour
 {
@@ -45,12 +46,16 @@ public sealed class GameRoot : MonoBehaviour
 
     [SerializeField] private float spawnInterval = 1.5f;
     [SerializeField] private float spawnRadius = 10f;
+    [SerializeField] private float harvestDropCountMultiplier = 1f;
+    [SerializeField] private float harvestDropAmountMultiplier = 1f;
 
     public PlayerEntity PlayerPrefab => playerPrefab;
     public EnemyEntity EnemyPrefab => enemyPrefab;
     public DropItem EnemyExpDropPrefab => enemyExpDropPrefab;
     public float SpawnInterval => spawnInterval;
     public float SpawnRadius => spawnRadius;
+    public float HarvestDropCountMultiplier => harvestDropCountMultiplier;
+    public float HarvestDropAmountMultiplier => harvestDropAmountMultiplier;
 
     [Header("Ground Snap")]
     [SerializeField] private LayerMask groundMask;
@@ -92,6 +97,16 @@ public sealed class GameRoot : MonoBehaviour
         _loop.Boot(_app);
         Debug.Log($"Physics.gravity = {Physics.gravity}");
 
+    }
+
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
 #if UNITY_EDITOR
@@ -182,6 +197,24 @@ public sealed class GameRoot : MonoBehaviour
     private void Update()
     {
         _loop?.Tick();
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        TryInitializeRunScope();
+    }
+
+    private void TryInitializeRunScope()
+    {
+        var scope = FindObjectOfType<RunScope>();
+        if (scope == null) return;
+        if (_app == null) return;
+
+        if (scope.App == null)
+            scope.Initialize(_app);
+
+        if (scope.Entities != null && scope.Entities.Player == null && scope.GameManager != null)
+            scope.GameManager.StartRun();
     }
 
     private void OnDestroy()

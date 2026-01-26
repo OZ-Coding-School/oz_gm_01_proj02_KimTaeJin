@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 67d3f14ccdfd66f44b7489353e6f14b9, type: 3}
+  m_Name: SkillOption_SoulFire_Upgrade_1
+  m_EditorClassIdentifier: 
+  id: skill_option_soulfire_1up
+  displayName: "\uB3C4\uAE68\uBE44\uBD88 (\uC704\uB825)+"
+  icon: {fileID: 677991882, guid: 1a21e653a39cf05498af90c58a924e98, type: 3}
+  description: "\uD2F1\uB2F9 \uB370\uBBF8\uC9C0\uB97C \uAC15\uD654\uD569\uB2C8\uB2E4"
+  optionType: 1
+  targetSkill: {fileID: 11400000, guid: f856ff2638d34b30859c120af6649102, type: 2}
+  damageDelta: 5
+  attackSpeedDelta: 0
+  rangeDelta: 0
+  levelDelta: 1

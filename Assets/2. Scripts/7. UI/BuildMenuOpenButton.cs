@@ -5,6 +5,7 @@ using UnityEngine.UI;
 public sealed class BuildMenuOpenButton : MonoBehaviour
 {
     [SerializeField] private BuildMenuPanel menu;
+    [SerializeField] private UIPanelQueue panelQueue;
     private Button _btn;
 
     private void Awake()
@@ -15,10 +16,15 @@ public sealed class BuildMenuOpenButton : MonoBehaviour
 
     private void OnClick()
     {
-        Debug.Log("[BuildMenuOpenButton] Click!");
+        if (panelQueue == null) panelQueue = FindObjectOfType<UIPanelQueue>(true);
+        if (panelQueue != null)
+        {
+            panelQueue.RequestBuildMenu();
+            return;
+        }
+
         if (menu == null) menu = FindObjectOfType<BuildMenuPanel>(true);
-        Debug.Log("[BuildMenuOpenButton] menu = " + (menu ? menu.name : "NULL"));
-        if (menu != null) menu.Open();
+        if (menu != null && !menu.IsOpen) menu.Open();
     }
 
 }

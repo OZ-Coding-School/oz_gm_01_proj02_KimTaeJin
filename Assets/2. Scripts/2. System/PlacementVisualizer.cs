@@ -22,6 +22,7 @@ public sealed partial class PlacementVisualizer : MonoBehaviour
     [SerializeField] private RawImage panelTargetImage;
     [SerializeField] private string panelLayerName = "PanelPreview";
     [SerializeField] private bool autoConfigurePanelCamera = true;
+    [SerializeField] private bool ignorePlayAreaFogOnPanelCamera = true;
 
     [Header("Panel Grid")]
     [SerializeField] private GameObject gridPlanePrefab;
@@ -69,6 +70,8 @@ public sealed partial class PlacementVisualizer : MonoBehaviour
 
     [Header("Panel Camera Align")]
     [SerializeField] private bool autoAlignPanelCamera = true;
+    [SerializeField] private bool autoApplyPanelCameraPitch = true;
+    [SerializeField, Range(10f, 89f)] private float panelCameraPitch = 70f;
 
     [Header("Panel Center")]
     [SerializeField] private GameObject centerPrefab;
@@ -87,6 +90,8 @@ public sealed partial class PlacementVisualizer : MonoBehaviour
     [Header("Debug")]
     [SerializeField] private bool debugLogs = false;
 
+    public bool IsWorldVisualizer => isWorldVisualizer;
+
     private readonly Dictionary<Vector3Int, PlacedView> _placed = new();
     private readonly List<Vector2Int> _releaseCells = new();
     private readonly List<GameObject> _gridPlanes = new();
@@ -95,6 +100,7 @@ public sealed partial class PlacementVisualizer : MonoBehaviour
     private readonly Dictionary<Vector2Int, Color> _gridPlaneBaseColors = new();
     private readonly List<Vector2Int> _hoverCells = new();
     private readonly HashSet<Vector2Int> _roadCells = new();
+    private readonly List<GridRoadUtility.RoadTower> _roadTowerBuffer = new();
     private readonly Dictionary<Vector2Int, GameObject> _panelRoadTiles = new();
     private readonly List<Vector2Int> _panelRoadRemove = new();
     private MaterialPropertyBlock _gridPlaneMpb;
@@ -126,6 +132,14 @@ public sealed partial class PlacementVisualizer : MonoBehaviour
     private bool _panelRoadTileHasBounds;
     private float _panelRoadTileBottomOffset;
     private readonly Dictionary<Transform, Vector3> _panelBasePlateScaleCache = new();
+    private readonly Dictionary<Vector2Int, AimSnapshot> _aimSnapshots = new();
+
+    public struct AimSnapshot
+    {
+        public Quaternion yawWorldRot;
+        public Quaternion pitchLocalRot;
+        public bool hasPitch;
+    }
 
     private sealed class PlacedView
     {

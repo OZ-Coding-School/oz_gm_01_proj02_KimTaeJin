@@ -59,6 +59,11 @@ public sealed class ResourceDepositReceiver : MonoBehaviour
 
     public void Deposit(ResourceType type, int amount)
     {
+        Deposit(type, amount, true);
+    }
+
+    public void Deposit(ResourceType type, int amount, bool countSkillProgress)
+    {
         if (amount <= 0) return;
 
         ResourceProgression progression = ResolveProgression();
@@ -67,7 +72,7 @@ public sealed class ResourceDepositReceiver : MonoBehaviour
         progression.AddResource(type, amount);
 
         if (debugLog)
-            Debug.Log($"[ResourceDepositReceiver] {type}={amount} target={gameObject.name}");
+            Debug.Log($"[ResourceDepositReceiver] {type}={amount} countSkill={countSkillProgress} target={gameObject.name}");
     }
 
     private ResourceProgression ResolveProgression()

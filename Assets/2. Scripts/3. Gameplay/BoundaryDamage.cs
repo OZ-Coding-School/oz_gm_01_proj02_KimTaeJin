@@ -7,8 +7,10 @@ public sealed class BoundaryDamage : MonoBehaviour
     [SerializeField] private PlayAreaProgressController playArea;
     [FormerlySerializedAs("radiusOverride")]
     [SerializeField] private float radiusPadding = 0f;
-    [SerializeField] private int damagePerSecond = 50;
-    [SerializeField] private float tickInterval = 0.2f;
+    [SerializeField] private int damagePerTick = 30;
+    [SerializeField] private int damagePerSecond = 60;
+    [SerializeField] private float tickInterval = 0.5f;
+    [SerializeField] private bool useUnscaledTime = false;
 
     private HealthComponent _hp;
     private float _tick;
@@ -27,7 +29,7 @@ public sealed class BoundaryDamage : MonoBehaviour
     private void Update()
     {
         if (!ResolvePlayArea()) return;
-        if (damagePerSecond <= 0 || tickInterval <= 0f) return;
+        if (tickInterval <= 0f) return;
 
         if (_hp == null)
         {
@@ -45,12 +47,22 @@ public sealed class BoundaryDamage : MonoBehaviour
             return;
         }
 
-        _tick += Time.deltaTime;
+        float dt = useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
+        _tick += dt;
         if (_tick < tickInterval) return;
 
-        int damage = Mathf.CeilToInt(damagePerSecond * _tick);
+        int damage = damagePerTick > 0
+            ? damagePerTick
+            : Mathf.CeilToInt(damagePerSecond * _tick);
         _tick = 0f;
         _hp.ApplyDamage(damage);
+    }
+
+    public void Configure(int perTick, float interval, float padding)
+    {
+        damagePerTick = Mathf.Max(0, perTick);
+        tickInterval = Mathf.Max(0.01f, interval);
+        radiusPadding = padding;
     }
 
     private bool ResolvePlayArea()

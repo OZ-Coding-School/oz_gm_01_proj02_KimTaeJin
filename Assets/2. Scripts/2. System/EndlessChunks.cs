@@ -64,6 +64,8 @@ public sealed class EndlessChunks : MonoBehaviour
     private List<Transform>[] _sideLSockets;
     private List<Transform>[] _sideRSockets;
 
+    private bool _started;
+
     private PoolService Pool => (GameRoot.Instance != null) ? GameRoot.Instance.Pool : null;
 
     private void Awake()
@@ -133,6 +135,22 @@ public sealed class EndlessChunks : MonoBehaviour
             _sideLSockets[i] = new List<Transform>(128);
             _sideRSockets[i] = new List<Transform>(128);
         }
+        ResolveCore();
+    }
+    private void OnEnable()
+    {
+        if (!_started) return;
+        ResolveCore();
+        if (chunkRoots == null || chunkRoots.Length == 0) return;
+        if (_spawnedByChunk == null || _spawnedByChunk.Length != chunkRoots.Length) return;
+
+        CacheSockets();
+
+        for (int i = 0; i < chunkRoots.Length; i++)
+        {
+            if (!HasAnySpawned(i))
+                ReshuffleResources(i);
+        }
     }
     private void ArrangeInitial()
     {
@@ -170,15 +188,19 @@ public sealed class EndlessChunks : MonoBehaviour
     private void Start()
     {
         AutoSortByZ();
+        ResolveCore();
         ArrangeInitial();
         CacheSockets();
 
         for (int i = 0; i < chunkRoots.Length; i++)
             ReshuffleResources(i);
+
+        _started = true;
     }
 
     private void Update()
     {
+        if (core == null) ResolveCore();
         float coreZ = core ? core.position.z : 0f;
 
         int safety = 0;
@@ -217,6 +239,21 @@ public sealed class EndlessChunks : MonoBehaviour
 
 
 
+
+    private void ResolveCore()
+    {
+        if (core != null) return;
+        var house = FindObjectOfType<HouseDrift>();
+        if (house != null)
+        {
+            core = house.transform;
+            return;
+        }
+
+        var scope = RunScopeLocator.Current;
+        if (scope != null && scope.Grid != null && scope.Grid.Anchor != null)
+            core = scope.Grid.Anchor;
+    }
 
     [ContextMenu("Cache Sockets")]
     private void CacheSockets()
@@ -264,6 +301,17 @@ public sealed class EndlessChunks : MonoBehaviour
             else Destroy(s.go);
         }
         list.Clear();
+    }
+
+    private bool HasAnySpawned(int chunkIndex)
+    {
+        var list = _spawnedByChunk[chunkIndex];
+        for (int i = 0; i < list.Count; i++)
+        {
+            var go = list[i].go;
+            if (go != null && go.activeInHierarchy) return true;
+        }
+        return false;
     }
 
     private void SpawnLaneBlockers(int chunkIndex, List<Vector3> used)

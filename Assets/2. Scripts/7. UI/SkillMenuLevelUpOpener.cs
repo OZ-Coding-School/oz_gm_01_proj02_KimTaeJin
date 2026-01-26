@@ -3,7 +3,8 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class SkillMenuLevelUpOpener : MonoBehaviour
 {
-    [SerializeField] private GameObject skillMenuRoot;
+    [SerializeField] private SkillMenuPanel panel;
+    [SerializeField] private UIPanelQueue panelQueue;
     [SerializeField] private bool forceCloseOnBind = true;
 
     private RunScope _scope;
@@ -52,17 +53,43 @@ public sealed class SkillMenuLevelUpOpener : MonoBehaviour
 
     private void OnStoneLevelUp(int level)
     {
-        if (skillMenuRoot == null) return;
-        if (!skillMenuRoot.activeSelf)
-            skillMenuRoot.SetActive(true);
+        RequestOpen();
     }
 
     private void ForceCloseMenu()
     {
         if (!forceCloseOnBind) return;
-        if (skillMenuRoot == null) return;
-        if (skillMenuRoot == gameObject) return;
-        if (skillMenuRoot.activeSelf)
-            skillMenuRoot.SetActive(false);
+        ResolvePanel();
+        if (panel != null)
+        {
+            if (panel.IsOpen) panel.Close();
+            return;
+        }
+    }
+
+    private void RequestOpen()
+    {
+        ResolvePanelQueue();
+        if (panelQueue != null)
+        {
+            panelQueue.RequestSkillMenu();
+            return;
+        }
+
+        ResolvePanel();
+        if (panel == null || panel.IsOpen) return;
+        panel.Open();
+    }
+
+    private void ResolvePanel()
+    {
+        if (panel != null) return;
+        panel = FindObjectOfType<SkillMenuPanel>(true);
+    }
+
+    private void ResolvePanelQueue()
+    {
+        if (panelQueue != null) return;
+        panelQueue = FindObjectOfType<UIPanelQueue>(true);
     }
 }

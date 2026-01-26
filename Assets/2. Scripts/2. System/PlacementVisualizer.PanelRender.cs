@@ -6,6 +6,7 @@ public sealed partial class PlacementVisualizer : MonoBehaviour
     private void ConfigurePanelRender()
     {
         if (isWorldVisualizer) return;
+        ApplyPanelCameraPitch();
         if (!autoConfigurePanelCamera) return;
 
         int layer = GetPanelLayer();
@@ -15,6 +16,8 @@ public sealed partial class PlacementVisualizer : MonoBehaviour
                 panelCamera.targetTexture = panelTexture;
             if (layer >= 0)
                 panelCamera.cullingMask = 1 << layer;
+            if (ignorePlayAreaFogOnPanelCamera && panelCamera.GetComponent<PlayAreaFogIgnore>() == null)
+                panelCamera.gameObject.AddComponent<PlayAreaFogIgnore>();
         }
 
         if (panelTargetImage != null && panelTexture != null)
@@ -25,6 +28,7 @@ public sealed partial class PlacementVisualizer : MonoBehaviour
     {
         if (isWorldVisualizer) return;
         if (!compensatePanelPitch) return;
+        ApplyPanelCameraPitch();
         if (grid == null || panelCamera == null) return;
 
         float baseCellX = grid.cellSize.x;
@@ -126,6 +130,7 @@ public sealed partial class PlacementVisualizer : MonoBehaviour
     {
         if (isWorldVisualizer) return;
         if (!autoAlignPanelCamera) return;
+        ApplyPanelCameraPitch();
         if (panelCamera == null || grid == null) return;
 
         int w = dataService != null && dataService.GridSystem != null ? dataService.GridSystem.Width : 1;
@@ -143,6 +148,17 @@ public sealed partial class PlacementVisualizer : MonoBehaviour
         Vector3 pos = center - forward * t;
         pos.y = y;
         panelCamera.transform.position = pos;
+    }
+
+    private void ApplyPanelCameraPitch()
+    {
+        if (!autoApplyPanelCameraPitch) return;
+        if (panelCamera == null) return;
+
+        Vector3 euler = panelCamera.transform.eulerAngles;
+        if (Mathf.Approximately(euler.x, panelCameraPitch)) return;
+        euler.x = panelCameraPitch;
+        panelCamera.transform.eulerAngles = euler;
     }
 
     private void CapturePanelBase()

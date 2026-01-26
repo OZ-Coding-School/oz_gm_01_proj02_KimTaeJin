@@ -31,6 +31,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 7003956829500086952}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1332576103126296255
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5773402267322572119}
+  m_Layer: 0
+  m_Name: SkillSlashPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5773402267322572119
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1332576103126296255}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.746, z: 0.4}
+  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7003956829500086952}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5752772578733619521
 GameObject:
   m_ObjectHideFlags: 0
@@ -58,6 +89,37 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0.664, z: 0.52}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7003956829500086952}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &7473578937282433153
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8685918572479086536}
+  m_Layer: 0
+  m_Name: SkillSoulFlare
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8685918572479086536
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7473578937282433153}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.746, z: 0.4}
+  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 7003956829500086952}
@@ -360,6 +422,14 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 1836482182038329571}
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 66a16ba60163fcd49a0d1dbcdf04bfc2,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5773402267322572119}
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 66a16ba60163fcd49a0d1dbcdf04bfc2,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8685918572479086536}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 66a16ba60163fcd49a0d1dbcdf04bfc2,
         type: 3}
@@ -401,6 +471,18 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 5374172575195753286}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 66a16ba60163fcd49a0d1dbcdf04bfc2,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -564636328141732440}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 66a16ba60163fcd49a0d1dbcdf04bfc2,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -7044858661049863754}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 66a16ba60163fcd49a0d1dbcdf04bfc2,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1377117563857680639}
   m_SourcePrefab: {fileID: 100100000, guid: 66a16ba60163fcd49a0d1dbcdf04bfc2, type: 3}
 --- !u!4 &7003956829500086952 stripped
 Transform:
@@ -520,6 +602,8 @@ MonoBehaviour:
     type: 3}
   vfxLifeTime: 1
   vfxOffset: {x: 0, y: 0.5, z: 0}
+  attackSfx: {fileID: 8300000, guid: 4c931f7edd3f3db4baeb30e73d3d16ec, type: 3}
+  attackSfxVolume: 0.212
 --- !u!114 &4989049703003665718
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -533,6 +617,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _baseMoveSpeed: 10
+  _maxHp: 100
 --- !u!114 &4954458928580215494
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -603,8 +688,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playArea: {fileID: 0}
   radiusPadding: 0
+  damagePerTick: 30
   damagePerSecond: 100
   tickInterval: 0.2
+  useUnscaledTime: 0
 --- !u!114 &5374172575195753286
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -619,3 +706,62 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxHp: 100
   resetOnEnable: 1
+--- !u!114 &-564636328141732440
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7672125009476075538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 415a77b02bb77b142af0d37789e5737f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  baseSkill: {fileID: 11400000, guid: a834f49f7e7afc041903cabb97ad25f3, type: 2}
+--- !u!114 &-7044858661049863754
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7672125009476075538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76ab9240c9b831246b94253df05417b8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  skillDef: {fileID: 11400000, guid: 82793cbfad57442ebf80b0e90642cc44, type: 2}
+  projectilePrefab: {fileID: 8180617075622420727, guid: b1a400fcc032b544f90e39155b3344d7,
+    type: 3}
+  firePoint: {fileID: 5773402267322572119}
+  aimMode: 1
+  activationRangeOverride: 12
+  drawActivationRangeGizmo: 1
+  drawOnlyWhenSelected: 1
+  activationRangeGizmoColor: {r: 0.2, g: 0.9, b: 1, a: 0.35}
+  projectileSpeed: 40
+  projectileLifeTime: 4
+--- !u!114 &1377117563857680639
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7672125009476075538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8ba7df77afa579f4c8a6857b840e5f0f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  skillDef: {fileID: 11400000, guid: f856ff2638d34b30859c120af6649102, type: 2}
+  projectilePrefab: {fileID: 3870299263738716935, guid: 6fe563c11112b3748b5caafbde9d95b4,
+    type: 3}
+  firePoint: {fileID: 8685918572479086536}
+  aimMode: 1
+  activationRangeOverride: 12
+  drawActivationRangeGizmo: 1
+  drawOnlyWhenSelected: 1
+  activationRangeGizmoColor: {r: 0.2, g: 0.9, b: 1, a: 0.35}
+  projectileSpeed: 8
+  projectileLifeTime: 10

@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd848319bbbd81749bda7f6c15ab82a1, type: 3}
+  m_Name: SBuffTower
+  m_EditorClassIdentifier: 
+  id: SBuffTower
+  displayName: "\uAE30\uC6D0 \uC7A5\uCE58"
+  icon: {fileID: 1236107023, guid: b617dab6d78164d4a8e524386f953f59, type: 3}
+  preview: {fileID: 0}
+  description: "\uBAA8\uB4E0 \uD0C0\uC6CC\uC758 \uACF5\uACA9\uC18D\uB3C4\uB97C\n7%
+    \uB192\uC5EC\uC90D\uB2C8\uB2E4!"
+  unlockBaseLevel: 2
+  prefab: {fileID: -4974601772029535255, guid: d8d1ef6dc35d29f499ffe7ff6f59d46f, type: 3}
+  footprint: {x: 1, y: 1}
+  footprintMask: {fileID: 11400000, guid: 02d76eff3c6191e4ca27662bb87dad0f, type: 2}
+  cost: 0
+  upgradeNext: {fileID: 0}
+  range: 0
+  attackSpeed: 0
+  damage: 0
+  knockback: 0
+  fireSfx: {fileID: 0}
+  fireSfxVolume: 1
+  passiveExpGainBonus: 0
+  passiveTowerDamageBonus: 0
+  passiveTowerAttackSpeedBonus: 0.07
+  projectilePrefab: {fileID: 0}
+  projectileSpeed: 0
+  projectileLifeTime: 0
+  hitEffect:
+    effectType: 0
+    overridePrefabEffects: 0
+    slowMultiplier: 0.05
+    slowDuration: 0
+    aoeRadius: 0
+    aoeDamageMultiplier: 0
+    aoeDamageOverride: 0
+    aoeIncludeDirectTarget: 0

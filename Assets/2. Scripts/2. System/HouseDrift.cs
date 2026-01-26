@@ -18,6 +18,11 @@ public sealed class HouseDrift : MonoBehaviour
     [SerializeField] private Transform boundsRoot;
     [SerializeField] private float boundsPadding = 0.05f;
 
+    [Header("Blocked SFX")]
+    [SerializeField] private AudioSource blockedSfxSource;
+    [SerializeField] private AudioClip blockedSfx;
+    [SerializeField, Range(0f, 1f)] private float blockedSfxVolume = 1f;
+
     [Header("Tile Filter")]
     [SerializeField] private bool useTileRealOnly = true;
     [SerializeField] private string[] tileNamePrefixes = { "Tile_", "RoadTile_" };
@@ -31,9 +36,16 @@ public sealed class HouseDrift : MonoBehaviour
     private static readonly RaycastHit[] _hits = new RaycastHit[8];
     private static readonly Collider[] _overlapHits = new Collider[16];
     private readonly List<Bounds> _probeBounds = new List<Bounds>(32);
+    private bool _isBlocked;
+    private Vector3 _blockedPoint;
+    private Vector3 _blockedSelfPoint;
+    private bool _wasBlocked;
 
     public Vector3 Direction => dir;
     public float Speed => speed;
+    public bool IsBlocked => _isBlocked;
+    public Vector3 BlockedPoint => _blockedPoint;
+    public Vector3 BlockedSelfPoint => _blockedSelfPoint;
 
     private void Awake()
     {
@@ -45,12 +57,25 @@ public sealed class HouseDrift : MonoBehaviour
 
     void Update()
     {
-        if (IsBlocked()) return;
+        if (CheckBlocked(out Vector3 blockedPoint, out Vector3 blockedSelfPoint))
+        {
+            _isBlocked = true;
+            _blockedPoint = blockedPoint;
+            _blockedSelfPoint = blockedSelfPoint;
+            if (!_wasBlocked)
+                PlayBlockedSfx();
+            _wasBlocked = true;
+            return;
+        }
+        _isBlocked = false;
+        _wasBlocked = false;
         transform.position += dir.normalized * (speed * Time.deltaTime);
     }
 
-    private bool IsBlocked()
+    private bool CheckBlocked(out Vector3 blockedPoint, out Vector3 blockedSelfPoint)
     {
+        blockedPoint = Vector3.zero;
+        blockedSelfPoint = Vector3.zero;
         Vector3 forward = dir.normalized;
         if (forward.sqrMagnitude <= 0.0001f) return false;
 
@@ -60,8 +85,12 @@ public sealed class HouseDrift : MonoBehaviour
             if (root != null)
             {
                 bool hasProbe;
-                if (IsBoundsProbeBlocked(root, forward, out hasProbe))
+                if (IsBoundsProbeBlocked(root, forward, out hasProbe, out blockedPoint, out blockedSelfPoint))
+                {
+                    if (blockedSelfPoint == Vector3.zero)
+                        blockedSelfPoint = blockedPoint;
                     return true;
+                }
                 if (useTileRealOnly && hasProbe)
                     return false;
             }
@@ -71,11 +100,17 @@ public sealed class HouseDrift : MonoBehaviour
 
         Vector3 fallbackOrigin = (checkOrigin != null ? checkOrigin.position : transform.position)
             + checkOffset + (forward * checkForwardOffset);
-        return ProbeBlocked(fallbackOrigin, forward, transform);
+        if (!ProbeBlocked(fallbackOrigin, forward, transform, out blockedPoint, out blockedSelfPoint))
+            return false;
+        if (blockedSelfPoint == Vector3.zero)
+            blockedSelfPoint = blockedPoint;
+        return true;
     }
 
-    private bool IsBoundsOverlapping(Bounds bounds, Transform ignoreRoot)
+    private bool IsBoundsOverlapping(Bounds bounds, Transform ignoreRoot, Vector3 forward, out Vector3 hitPoint, out Vector3 selfPoint)
     {
+        hitPoint = Vector3.zero;
+        selfPoint = GetBoundsForwardPoint(bounds, forward);
         int mask = obstacleMask.value != 0 ? obstacleMask.value : ~0;
         int hitCount = Physics.OverlapBoxNonAlloc(
             bounds.center,
@@ -90,14 +125,18 @@ public sealed class HouseDrift : MonoBehaviour
             var col = _overlapHits[i];
             if (col == null) continue;
             if (ignoreRoot != null && col.transform.IsChildOf(ignoreRoot)) continue;
+            hitPoint = col.ClosestPoint(bounds.center);
+            selfPoint = bounds.ClosestPoint(hitPoint);
             return true;
         }
 
         return false;
     }
 
-    private bool IsBoundsAheadBlocked(Bounds bounds, Vector3 forward, Transform ignoreRoot)
+    private bool IsBoundsAheadBlocked(Bounds bounds, Vector3 forward, Transform ignoreRoot, out Vector3 hitPoint, out Vector3 selfPoint)
     {
+        hitPoint = Vector3.zero;
+        selfPoint = Vector3.zero;
         int mask = obstacleMask.value != 0 ? obstacleMask.value : ~0;
         float dist = Mathf.Max(0.01f, checkDistance);
         Vector3 origin = bounds.center + checkOffset + (forward * checkForwardOffset);
@@ -114,19 +153,32 @@ public sealed class HouseDrift : MonoBehaviour
             mask,
             triggerInteraction);
 
+        float bestDist = float.MaxValue;
         for (int i = 0; i < hitCount; i++)
         {
             var hit = _hits[i];
             if (hit.collider == null) continue;
             if (ignoreRoot != null && hit.collider.transform.IsChildOf(ignoreRoot)) continue;
+            if (hit.distance < bestDist)
+            {
+                bestDist = hit.distance;
+                hitPoint = hit.point;
+            }
+        }
+
+        if (bestDist < float.MaxValue)
+        {
+            selfPoint = GetBoundsForwardPoint(bounds, forward);
             return true;
         }
 
         return false;
     }
 
-    private bool ProbeBlocked(Vector3 origin, Vector3 forward, Transform ignoreRoot)
+    private bool ProbeBlocked(Vector3 origin, Vector3 forward, Transform ignoreRoot, out Vector3 hitPoint, out Vector3 selfPoint)
     {
+        hitPoint = origin + forward * Mathf.Max(0.01f, checkDistance);
+        selfPoint = origin;
         int mask = obstacleMask.value != 0 ? obstacleMask.value : ~0;
 
         int hitCount = Physics.SphereCastNonAlloc(
@@ -138,14 +190,22 @@ public sealed class HouseDrift : MonoBehaviour
             mask,
             triggerInteraction);
 
+        float bestDist = float.MaxValue;
         for (int i = 0; i < hitCount; i++)
         {
             var hit = _hits[i];
             if (hit.collider == null) continue;
             if (ignoreRoot != null && hit.collider.transform.IsChildOf(ignoreRoot)) continue;
-            return true;
+            if (hit.distance < bestDist)
+            {
+                bestDist = hit.distance;
+                hitPoint = hit.point;
+            }
         }
 
+        if (bestDist < float.MaxValue)
+            return true;
+        selfPoint = Vector3.zero;
         return false;
     }
 
@@ -158,8 +218,10 @@ public sealed class HouseDrift : MonoBehaviour
         return transform;
     }
 
-    private bool IsBoundsProbeBlocked(Transform root, Vector3 forward, out bool hasProbe)
+    private bool IsBoundsProbeBlocked(Transform root, Vector3 forward, out bool hasProbe, out Vector3 hitPoint, out Vector3 selfPoint)
     {
+        hitPoint = Vector3.zero;
+        selfPoint = Vector3.zero;
         if (!TryGetProbeBounds(root, _probeBounds))
         {
             hasProbe = false;
@@ -173,13 +235,22 @@ public sealed class HouseDrift : MonoBehaviour
             if (boundsPadding > 0f)
                 bounds.Expand(boundsPadding * 2f);
 
-            if (IsBoundsOverlapping(bounds, root))
+            if (IsBoundsOverlapping(bounds, root, forward, out hitPoint, out selfPoint))
                 return true;
-            if (IsBoundsAheadBlocked(bounds, forward, root))
+            if (IsBoundsAheadBlocked(bounds, forward, root, out hitPoint, out selfPoint))
                 return true;
         }
 
         return false;
+    }
+
+    private Vector3 GetBoundsForwardPoint(Bounds bounds, Vector3 forward)
+    {
+        if (forward.sqrMagnitude <= 0.0001f) return bounds.center;
+        Vector3 dir = forward.normalized;
+        Vector3 extents = bounds.extents;
+        float dist = Mathf.Abs(dir.x) * extents.x + Mathf.Abs(dir.y) * extents.y + Mathf.Abs(dir.z) * extents.z;
+        return bounds.center + dir * dist;
     }
 
     private void OnDrawGizmos()
@@ -294,6 +365,20 @@ public sealed class HouseDrift : MonoBehaviour
         }
 
         return results.Count > 0;
+    }
+
+    private void PlayBlockedSfx()
+    {
+        if (blockedSfx != null)
+        {
+            if (blockedSfxSource == null)
+                blockedSfxSource = GetComponent<AudioSource>();
+            if (blockedSfxSource != null)
+                blockedSfxSource.PlayOneShot(blockedSfx, Mathf.Clamp01(blockedSfxVolume));
+            return;
+        }
+
+        GameAudio.Instance?.PlayPathBlocked();
     }
 
 }

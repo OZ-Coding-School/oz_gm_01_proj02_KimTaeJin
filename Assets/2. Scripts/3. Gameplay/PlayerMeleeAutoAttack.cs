@@ -20,6 +20,11 @@ public sealed class PlayerMeleeAutoAttack : MonoBehaviour
     [SerializeField] private GameObject hitVfxPrefab;
     [SerializeField] private float vfxLifeTime = 1.0f;
     [SerializeField] private Vector3 vfxOffset = new(0f, 0.8f, 0f);
+
+    [Header("???")]
+    [SerializeField] private AudioClip attackSfx;
+    [SerializeField, Range(0f, 1f)] private float attackSfxVolume = 1f;
+
 
     private RunScope _scope;
     private float _cooldown;
@@ -66,6 +71,8 @@ public sealed class PlayerMeleeAutoAttack : MonoBehaviour
 
         // VFX
         SpawnVfx(hitVfxPrefab);
+        if (attackSfx != null)
+            GameAudio.Instance?.PlaySfx(attackSfx, attackSfxVolume);
 
 
         // 범위 피해 + 넉백
@@ -122,4 +129,21 @@ public sealed class PlayerMeleeAutoAttack : MonoBehaviour
         var vfx = Instantiate(prefab, attackSocket.position, attackSocket.rotation);
         Destroy(vfx, vfxLifeTime);
     }
+
+    public void GetCombatStats(out float range, out float radius, out float attackSpeed, out int power)
+    {
+        range = attackRange;
+        radius = hitRadius;
+        attackSpeed = attacksPerSecond;
+        power = damage;
+    }
+
+    public void SetCombatStats(float range, float radius, float attackSpeed, int power)
+    {
+        attackRange = Mathf.Max(0.01f, range);
+        hitRadius = Mathf.Max(0.01f, radius);
+        attacksPerSecond = Mathf.Max(0.01f, attackSpeed);
+        damage = Mathf.Max(0, power);
+    }
+
 }

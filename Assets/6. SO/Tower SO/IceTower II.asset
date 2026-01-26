@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd848319bbbd81749bda7f6c15ab82a1, type: 3}
+  m_Name: IceTower II
+  m_EditorClassIdentifier: 
+  id: IceTower II
+  displayName: "\uB0C9\uAC01\uD3EC II"
+  icon: {fileID: 21300000, guid: 2261ebedceeade240833d0ef9a65e6da, type: 3}
+  preview: {fileID: 0}
+  description: "\uD639\uB3C5\uD55C \uC5BC\uC74C \uD3EC\uD0D1\uC785\uB2C8\uB2E4!"
+  unlockBaseLevel: 1
+  prefab: {fileID: 393315508033582358, guid: 035abc09273a22143b244766f373bfde, type: 3}
+  footprint: {x: 1, y: 1}
+  footprintMask: {fileID: 11400000, guid: 02d76eff3c6191e4ca27662bb87dad0f, type: 2}
+  cost: 0
+  upgradeNext: {fileID: 11400000, guid: f03e3fcab8a3ea14b8b9b94ccdd660d2, type: 2}
+  range: 30
+  attackSpeed: 0.8
+  damage: 20
+  knockback: 0
+  fireSfx: {fileID: 8300000, guid: 056a9f0e12bdac14b969148bb9578dbc, type: 3}
+  fireSfxVolume: 0.301
+  passiveExpGainBonus: 0
+  passiveTowerDamageBonus: 0
+  passiveTowerAttackSpeedBonus: 0
+  projectilePrefab: {fileID: 717054376778955265, guid: feb7237ddd0ad9e4182e83ba37c7e347,
+    type: 3}
+  projectileSpeed: 35
+  projectileLifeTime: 2
+  hitEffect:
+    effectType: 2
+    overridePrefabEffects: 0
+    slowMultiplier: 0.7
+    slowDuration: 2
+    aoeRadius: 5
+    aoeDamageMultiplier: 0.5
+    aoeDamageOverride: 0
+    aoeIncludeDirectTarget: 0

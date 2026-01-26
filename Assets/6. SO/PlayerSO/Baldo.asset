@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6329be501ed374040a75d051606e7427, type: 3}
+  m_Name: Baldo
+  m_EditorClassIdentifier: 
+  id: skill_basic
+  displayName: "\uBC1C\uB3C4"
+  icon: {fileID: 21300000, guid: 4fb3b4b200d1a5e43b71cc0946b92b0b, type: 3}
+  description: "\uBE60\uB974\uAC8C \uBC1C\uB3C4\uD558\uC5EC \uC804\uBC29\uC758 \uC801\uC744
+    \uBCB1\uB2C8\uB2E4!"
+  baseDamage: 10
+  baseAttackSpeed: 1.2
+  baseRange: 2
+  castSfx: {fileID: 8300000, guid: f4ae2d7ab74ed684a849d44405e2e604, type: 3}
+  castSfxVolume: 0.314

@@ -6,12 +6,14 @@ public sealed class BuildModeController : MonoBehaviour
 
     private WorldScroller _worldScroller;
     private HouseDrift _houseDrift;
+    private RestStopSystem _restStopSystem;
 
     private PlayerController _playerController;
     private PlayerMeleeAutoAttack _melee;
     private PlayerHarvestAutoAttack _harvest;
     private EndlessChunks _chunks;
     private Rigidbody _playerRb;
+    private bool _resumeAfterRest;
 
 
     public void Construct(RunScope scope)
@@ -20,6 +22,7 @@ public sealed class BuildModeController : MonoBehaviour
 
         _worldScroller = FindObjectOfType<WorldScroller>();
         _houseDrift = FindObjectOfType<HouseDrift>();
+        _restStopSystem = FindObjectOfType<RestStopSystem>();
 
         _playerController = FindObjectOfType<PlayerController>();
         _melee = FindObjectOfType<PlayerMeleeAutoAttack>();
@@ -31,17 +34,53 @@ public sealed class BuildModeController : MonoBehaviour
 
         if (_scope?.Events != null)
             _scope.Events.BuildModeChanged += OnBuildModeChanged;
+
+        if (_restStopSystem != null)
+            _restStopSystem.RestStateChanged += OnRestStateChanged;
     }
 
     private void OnDestroy()
     {
         if (_scope?.Events != null)
             _scope.Events.BuildModeChanged -= OnBuildModeChanged;
+
+        if (_restStopSystem != null)
+            _restStopSystem.RestStateChanged -= OnRestStateChanged;
     }
 
     private void OnBuildModeChanged(bool on)
     {
+        if (on)
+        {
+            _resumeAfterRest = false;
+            ApplyBuildMode(true);
+            return;
+        }
 
+        bool isResting = _restStopSystem != null && _restStopSystem.IsResting;
+        if (isResting)
+        {
+            ApplyBuildModeOffWhileResting();
+            _resumeAfterRest = true;
+            return;
+        }
+
+        ApplyBuildMode(false);
+        _resumeAfterRest = false;
+    }
+
+    private void OnRestStateChanged(bool isResting)
+    {
+        if (isResting) return;
+        if (!_resumeAfterRest) return;
+        if (_scope?.Events != null && _scope.Events.IsBuildMode) return;
+
+        ApplyBuildMode(false);
+        _resumeAfterRest = false;
+    }
+
+    private void ApplyBuildMode(bool on)
+    {
         if (_worldScroller != null) _worldScroller.enabled = !on;
         if (_houseDrift != null) _houseDrift.enabled = !on;
 
@@ -74,5 +113,12 @@ public sealed class BuildModeController : MonoBehaviour
                 if (rb != null) rb.velocity = Vector3.zero;
             }
         }
+    }
+
+    private void ApplyBuildModeOffWhileResting()
+    {
+        if (_playerController != null) _playerController.enabled = true;
+        if (_melee != null) _melee.enabled = true;
+        if (_harvest != null) _harvest.enabled = true;
     }
 }

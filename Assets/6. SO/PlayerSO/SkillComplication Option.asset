@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f5946592b7c8864baf1dd7d6fecfefa, type: 3}
+  m_Name: SkillComplication Option
+  m_EditorClassIdentifier: 
+  options:
+  - {fileID: 11400000, guid: 7ba2ab97ac0ec6a4fa6566018b557059, type: 2}
+  - {fileID: 11400000, guid: 9bb46abee8769624bad6d9d2d638851b, type: 2}
+  - {fileID: 11400000, guid: 6d9434cb3a7f2a440ac2ca3a288fdf07, type: 2}
+  - {fileID: 11400000, guid: 0e295d9fa55846ed8e5e59106af69cb9, type: 2}
+  - {fileID: 11400000, guid: 69c243804f67b744ebe7c8ed93681d14, type: 2}
+  - {fileID: 11400000, guid: dfd893d4019242a78f1d9b7bb7a2a276, type: 2}
+  - {fileID: 11400000, guid: 82115668a077cd74d8c4e1917dd81759, type: 2}
+  - {fileID: 11400000, guid: e43b7a9a30e84a9b8dde0c2c6992b860, type: 2}
+  - {fileID: 11400000, guid: 7885f5c38e7cfc941935ccfa08a69906, type: 2}
+  - {fileID: 11400000, guid: aed5cd86dbb0492887a0dbfe57907ba0, type: 2}
+  - {fileID: 11400000, guid: 823e775621fd0854f92c9546792e7e24, type: 2}

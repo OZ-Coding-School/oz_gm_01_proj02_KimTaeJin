@@ -118,7 +118,7 @@ TextureImporter:
         width: 287
         height: 107
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -126,6 +126,48 @@ TextureImporter:
       bones: []
       spriteID: 24900b3fa36d74d49ae389aeb45cd2fd
       internalID: -397353602
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Upgreade Paneel
+      rect:
+        serializedVersion: 2
+        x: 305
+        y: 257
+        width: 507
+        height: 177
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 387a5ffa271119146bb1cd0f12ce73e8
+      internalID: -2010022758
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HPBAR
+      rect:
+        serializedVersion: 2
+        x: 2
+        y: 769
+        width: 979
+        height: 67
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1736b8737a770c34a8b576d33dd329ff
+      internalID: -1014573653
       vertices: []
       indices: 
       edges: []
@@ -141,7 +183,9 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
+      HPBAR: -1014573653
       Tower Unique Level: -397353602
+      Upgreade Paneel: -2010022758
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
