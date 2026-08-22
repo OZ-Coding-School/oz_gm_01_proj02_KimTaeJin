@@ -29,6 +29,8 @@ public sealed class GridSystem : MonoBehaviour
     [SerializeField] private bool drawAnchor = true;
 
     private readonly HashSet<Vector2Int> _occupied = new();
+    private readonly HashSet<Vector2Int> _transactionCells = new();
+    private readonly HashSet<Vector2Int> _replaceableCells = new();
 
     public float CellSize => cellSize;
     public float CellSizeX => cellSize;
@@ -40,6 +42,7 @@ public sealed class GridSystem : MonoBehaviour
 
     public Transform Anchor => anchor;
     public Vector3 Origin => origin;
+    public int OccupiedCount => _occupied.Count;
 
     public void Configure(float newCellSize, Vector3 newOrigin)
     {
@@ -193,11 +196,81 @@ public sealed class GridSystem : MonoBehaviour
     public bool IsOccupied(Vector2Int cell) => _occupied.Contains(cell);
     public bool TryOccupy(Vector2Int cell)
     {
+        if (!IsInBounds(cell)) return false;
         bool added = _occupied.Add(cell);
         if (logOccupy && added)
             Debug.Log($"[GridSystem] Occupy cell={cell} by {new System.Diagnostics.StackTrace(1, false).GetFrame(0)?.GetMethod()?.DeclaringType?.Name}");
         return added;
     }
+
+    public bool CanOccupyAll(IReadOnlyList<Vector2Int> cells)
+    {
+        return ValidateNewCells(cells, null);
+    }
+
+    public bool TryOccupyAll(IReadOnlyList<Vector2Int> cells)
+    {
+        if (!ValidateNewCells(cells, null)) return false;
+
+        for (int i = 0; i < cells.Count; i++)
+            _occupied.Add(cells[i]);
+
+        if (logOccupy)
+            Debug.Log($"[GridSystem] Occupied transaction cells={cells.Count}");
+        return true;
+    }
+
+    public bool TryReplaceAll(IReadOnlyList<Vector2Int> currentCells, IReadOnlyList<Vector2Int> nextCells)
+    {
+        if (!ValidateCurrentCells(currentCells)) return false;
+        if (!ValidateNewCells(nextCells, _replaceableCells)) return false;
+
+        for (int i = 0; i < currentCells.Count; i++)
+            _occupied.Remove(currentCells[i]);
+        for (int i = 0; i < nextCells.Count; i++)
+            _occupied.Add(nextCells[i]);
+
+        if (logOccupy)
+            Debug.Log($"[GridSystem] Replaced transaction current={currentCells.Count} next={nextCells.Count}");
+        return true;
+    }
+
+    public void ReleaseAll(IReadOnlyList<Vector2Int> cells)
+    {
+        if (cells == null) return;
+        for (int i = 0; i < cells.Count; i++)
+            _occupied.Remove(cells[i]);
+    }
+
+    private bool ValidateCurrentCells(IReadOnlyList<Vector2Int> cells)
+    {
+        if (cells == null || cells.Count == 0) return false;
+
+        _replaceableCells.Clear();
+        for (int i = 0; i < cells.Count; i++)
+        {
+            Vector2Int cell = cells[i];
+            if (!IsInBounds(cell) || !_occupied.Contains(cell) || !_replaceableCells.Add(cell))
+                return false;
+        }
+        return true;
+    }
+
+    private bool ValidateNewCells(IReadOnlyList<Vector2Int> cells, HashSet<Vector2Int> allowedOccupied)
+    {
+        if (cells == null || cells.Count == 0) return false;
+
+        _transactionCells.Clear();
+        for (int i = 0; i < cells.Count; i++)
+        {
+            Vector2Int cell = cells[i];
+            if (!IsInBounds(cell) || !_transactionCells.Add(cell)) return false;
+            if (_occupied.Contains(cell) && (allowedOccupied == null || !allowedOccupied.Contains(cell)))
+                return false;
+        }
+        return true;
+    }
+
     public void Release(Vector2Int cell) => _occupied.Remove(cell);
     public void ClearAll() => _occupied.Clear();
 }

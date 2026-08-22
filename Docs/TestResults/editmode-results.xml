@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="12" result="Passed" total="12" passed="12" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-08-22 13:19:55Z" end-time="2026-08-22 13:19:55Z" duration="0.738078">
+  <test-suite type="TestSuite" id="1000" name="Yui Project" fullname="Yui Project" runstate="Runnable" testcasecount="12" result="Passed" start-time="2026-08-22 13:19:55Z" end-time="2026-08-22 13:19:55Z" duration="0.738078" total="12" passed="12" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1016" name="Assembly-CSharp-Editor.dll" fullname="C:/Users/c/AppData/Local/Temp/oz-gm-validation-20260822-gridtx/Library/ScriptAssemblies/Assembly-CSharp-Editor.dll" runstate="Runnable" testcasecount="12" result="Passed" start-time="2026-08-22 13:19:55Z" end-time="2026-08-22 13:19:55Z" duration="0.727268" total="12" passed="12" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="142792" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestFixture" id="1008" name="GridDataServiceTransactionTests" fullname="GridDataServiceTransactionTests" classname="GridDataServiceTransactionTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-08-22 13:19:55Z" end-time="2026-08-22 13:19:55Z" duration="0.051793" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-case id="1013" name="ClearAll_ReleasesTowersButPreservesExternalCenterReservation" fullname="GridDataServiceTransactionTests.ClearAll_ReleasesTowersButPreservesExternalCenterReservation" methodname="ClearAll_ReleasesTowersButPreservesExternalCenterReservation" classname="GridDataServiceTransactionTests" runstate="Runnable" seed="1352874613" result="Passed" start-time="2026-08-22 13:19:55Z" end-time="2026-08-22 13:19:55Z" duration="0.027615" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1009" name="TryApplyPlacement_ReservesMultiCellFootprintWithoutVisualizer" fullname="GridDataServiceTransactionTests.TryApplyPlacement_ReservesMultiCellFootprintWithoutVisualizer" methodname="TryApplyPlacement_ReservesMultiCellFootprintWithoutVisualizer" classname="GridDataServiceTransactionTests" runstate="Runnable" seed="1703210119" result="Passed" start-time="2026-08-22 13:19:55Z" end-time="2026-08-22 13:19:55Z" duration="0.000832" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1010" name="TryRemove_ReleasesExactlyTheOwnedFootprint" fullname="GridDataServiceTransactionTests.TryRemove_ReleasesExactlyTheOwnedFootprint" methodname="TryRemove_ReleasesExactlyTheOwnedFootprint" classname="GridDataServiceTransactionTests" runstate="Runnable" seed="1259291145" result="Passed" start-time="2026-08-22 13:19:55Z" end-time="2026-08-22 13:19:55Z" duration="0.002496" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1011" name="Upgrade_GrowsFootprintAsOneTransaction" fullname="GridDataServiceTransactionTests.Upgrade_GrowsFootprintAsOneTransaction" methodname="Upgrade_GrowsFootprintAsOneTransaction" classname="GridDataServiceTransactionTests" runstate="Runnable" seed="886892970" result="Passed" start-time="2026-08-22 13:19:55Z" end-time="2026-08-22 13:19:55Z" duration="0.003820" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1012" name="Upgrade_WhenExpansionConflicts_PreservesLevelAndFootprint" fullname="GridDataServiceTransactionTests.Upgrade_WhenExpansionConflicts_PreservesLevelAndFootprint" methodname="Upgrade_WhenExpansionConflicts_PreservesLevelAndFootprint" classname="GridDataServiceTransactionTests" runstate="Runnable" seed="1746744560" result="Passed" start-time="2026-08-22 13:19:55Z" end-time="2026-08-22 13:19:55Z" duration="0.003218" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+      </test-suite>
+      <test-suite type="TestFixture" id="1001" name="GridSystemTransactionTests" fullname="GridSystemTransactionTests" classname="GridSystemTransactionTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-08-22 13:19:55Z" end-time="2026-08-22 13:19:55Z" duration="0.015873" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-case id="1002" name="TryOccupy_RejectsOutOfBoundsCell" fullname="GridSystemTransactionTests.TryOccupy_RejectsOutOfBoundsCell" methodname="TryOccupy_RejectsOutOfBoundsCell" classname="GridSystemTransactionTests" runstate="Runnable" seed="1746959439" result="Passed" start-time="2026-08-22 13:19:55Z" end-time="2026-08-22 13:19:55Z" duration="0.001533" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1003" name="TryOccupyAll_CommitsEveryCellTogether" fullname="GridSystemTransactionTests.TryOccupyAll_CommitsEveryCellTogether" methodname="TryOccupyAll_CommitsEveryCellTogether" classname="GridSystemTransactionTests" runstate="Runnable" seed="384995907" result="Passed" start-time="2026-08-22 13:19:55Z" end-time="2026-08-22 13:19:55Z" duration="0.000969" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1005" name="TryOccupyAll_RejectsDuplicateAndOutOfBoundsCellsWithoutMutation" fullname="GridSystemTransactionTests.TryOccupyAll_RejectsDuplicateAndOutOfBoundsCellsWithoutMutation" methodname="TryOccupyAll_RejectsDuplicateAndOutOfBoundsCellsWithoutMutation" classname="GridSystemTransactionTests" runstate="Runnable" seed="1121553799" result="Passed" start-time="2026-08-22 13:19:55Z" end-time="2026-08-22 13:19:55Z" duration="0.000630" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1004" name="TryOccupyAll_WhenOneCellConflicts_LeavesNoPartialReservation" fullname="GridSystemTransactionTests.TryOccupyAll_WhenOneCellConflicts_LeavesNoPartialReservation" methodname="TryOccupyAll_WhenOneCellConflicts_LeavesNoPartialReservation" classname="GridSystemTransactionTests" runstate="Runnable" seed="2118137706" result="Passed" start-time="2026-08-22 13:19:55Z" end-time="2026-08-22 13:19:55Z" duration="0.000903" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1006" name="TryReplaceAll_AllowsOverlapAndReleasesOldCells" fullname="GridSystemTransactionTests.TryReplaceAll_AllowsOverlapAndReleasesOldCells" methodname="TryReplaceAll_AllowsOverlapAndReleasesOldCells" classname="GridSystemTransactionTests" runstate="Runnable" seed="248211001" result="Passed" start-time="2026-08-22 13:19:55Z" end-time="2026-08-22 13:19:55Z" duration="0.001035" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1007" name="TryReplaceAll_WhenExpansionConflicts_PreservesOriginalReservation" fullname="GridSystemTransactionTests.TryReplaceAll_WhenExpansionConflicts_PreservesOriginalReservation" methodname="TryReplaceAll_WhenExpansionConflicts_PreservesOriginalReservation" classname="GridSystemTransactionTests" runstate="Runnable" seed="678220046" result="Passed" start-time="2026-08-22 13:19:55Z" end-time="2026-08-22 13:19:55Z" duration="0.000807" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+      </test-suite>
+      <test-suite type="TestFixture" id="1014" name="MainSceneIntegrityTests" fullname="MainSceneIntegrityTests" classname="MainSceneIntegrityTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-08-22 13:19:55Z" end-time="2026-08-22 13:19:55Z" duration="0.656220" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-case id="1015" name="MainScene_LoadsWithoutMissingComponents" fullname="MainSceneIntegrityTests.MainScene_LoadsWithoutMissingComponents" methodname="MainScene_LoadsWithoutMissingComponents" classname="MainSceneIntegrityTests" runstate="Runnable" seed="1145882595" result="Passed" start-time="2026-08-22 13:19:55Z" end-time="2026-08-22 13:19:55Z" duration="0.650325" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[RenderTexture.Create failed
+RenderTexture.Create failed
+Failed to set the active render target, ensure that it is a valid render target.
+The render pass PlayAreaFogFeature+PlayAreaFogPass does not have an implementation of the RecordRenderGraph method. Please implement this method, or consider turning on Compatibility Mode (RenderGraph disabled) in the menu Edit > Project Settings > Graphics > URP. Otherwise the render pass will have no effect. For more information, refer to https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@latest/index.html?subfolder=/manual/customizing-urp.html.
+RenderTexture.Create failed
+RenderTexture.Create failed
+RenderTexture.Create failed
+RenderTexture.Create failed
+RenderTexture.Create failed
+RenderTexture.Create failed
+RenderTexture.Create failed
+DrawDepthNormalPrepass: Unable to find surface for attachment 0
+EndRenderPass: Not inside a Renderpass
+RenderTexture.Create failed
+RenderTexture.Create failed
+RenderTexture.Create failed
+DrawOpaqueObjects: Unable to find surface for attachment 0
+EndRenderPass: Not inside a Renderpass
+RenderTexture.Create failed
+RenderTexture.Create failed
+RenderTexture.Create failed
+DrawTransparentObjects: Unable to find surface for attachment 0
+EndRenderPass: Not inside a Renderpass
+RenderTexture.Create failed
+BlitFinalToBackBuffer: Unable to find surface for attachment 0
+EndRenderPass: Not inside a Renderpass
+No graphic device is available to initialize the view.
+No graphic device is available to show the window.
+No graphic device is available to initialize the view.
+The render pass PlayAreaFogFeature+PlayAreaFogPass does not have an implementation of the RecordRenderGraph method. Please implement this method, or consider turning on Compatibility Mode (RenderGraph disabled) in the menu Edit > Project Settings > Graphics > URP. Otherwise the render pass will have no effect. For more information, refer to https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@latest/index.html?subfolder=/manual/customizing-urp.html.
+RenderTexture.Create failed
+RenderTexture.Create failed
+RenderTexture.Create failed
+RenderTexture.Create failed
+RenderTexture.Create failed
+DrawDepthNormalPrepass: Unable to find surface for attachment 0
+EndRenderPass: Not inside a Renderpass
+RenderTexture.Create failed
+RenderTexture.Create failed
+RenderTexture.Create failed
+DrawOpaqueObjects: Unable to find surface for attachment 0
+EndRenderPass: Not inside a Renderpass
+RenderTexture.Create failed
+RenderTexture.Create failed
+RenderTexture.Create failed
+DrawTransparentObjects: Unable to find surface for attachment 0
+EndRenderPass: Not inside a Renderpass
+RenderTexture.Create failed
+BlitFinalToBackBuffer: Unable to find surface for attachment 0
+EndRenderPass: Not inside a Renderpass
+Saving results to: C:/Users/c/AppData/LocalLow/DefaultCompany/Yui Project\TestResults.xml
+]]></output>
+        </test-case>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

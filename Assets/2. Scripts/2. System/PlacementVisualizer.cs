@@ -93,7 +93,6 @@ public sealed partial class PlacementVisualizer : MonoBehaviour
     public bool IsWorldVisualizer => isWorldVisualizer;
 
     private readonly Dictionary<Vector3Int, PlacedView> _placed = new();
-    private readonly List<Vector2Int> _releaseCells = new();
     private readonly List<GameObject> _gridPlanes = new();
     private readonly List<LineRenderer> _gridLines = new();
     private readonly Dictionary<Vector2Int, Renderer> _gridPlaneRenderers = new();

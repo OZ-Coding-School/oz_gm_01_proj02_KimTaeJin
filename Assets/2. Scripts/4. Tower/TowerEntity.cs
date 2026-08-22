@@ -214,20 +214,19 @@ public sealed class TowerEntity : MonoBehaviour
                             dataService.TryRemove(cell3);
                     }
                 }
-            }
-            if (_scope.Grid != null && !_suppressGridRelease)
-            {
-                if (_occupiedCells != null && _occupiedCells.Length > 0)
+                else if (_scope.Grid != null)
                 {
-                    for (int i = 0; i < _occupiedCells.Length; i++)
-                        _scope.Grid.Release(_occupiedCells[i]);
-                }
-                else
-                {
-                    for (int y = 0; y < Footprint.y; y++)
+                    if (_occupiedCells != null && _occupiedCells.Length > 0)
                     {
-                        for (int x = 0; x < Footprint.x; x++)
-                            _scope.Grid.Release(new Vector2Int(Cell.x + x, Cell.y + y));
+                        _scope.Grid.ReleaseAll(_occupiedCells);
+                    }
+                    else
+                    {
+                        for (int y = 0; y < Footprint.y; y++)
+                        {
+                            for (int x = 0; x < Footprint.x; x++)
+                                _scope.Grid.Release(new Vector2Int(Cell.x + x, Cell.y + y));
+                        }
                     }
                 }
             }

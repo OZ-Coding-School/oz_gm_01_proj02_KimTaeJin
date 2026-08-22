@@ -36,10 +36,12 @@ public sealed class GridDataService : MonoBehaviour
 
     private RunScope _scope;
     private readonly Dictionary<Vector3Int, TowerData> _data = new();
+    private readonly Dictionary<Vector3Int, Vector2Int[]> _occupiedByTower = new();
     private readonly Dictionary<string, TowerDefinitionSO> _defsById = new();
     private readonly HashSet<Vector2Int> _roadCells = new();
     private readonly List<Vector2Int> _cells = new();
     private readonly List<Vector2Int> _upgradeCells = new();
+    private readonly List<Vector3Int> _changedCells = new();
     private readonly List<GridRoadUtility.RoadTower> _roadTowers = new();
     private int _nextOrder;
 
@@ -108,8 +110,20 @@ public sealed class GridDataService : MonoBehaviour
 
     public void ClearAll()
     {
+        _changedCells.Clear();
+        foreach (var kvp in _data)
+            _changedCells.Add(kvp.Key);
+
+        if (gridSystem != null)
+        {
+            foreach (var kvp in _occupiedByTower)
+                gridSystem.ReleaseAll(kvp.Value);
+        }
+        _occupiedByTower.Clear();
         _data.Clear();
         ResetOrder();
+        for (int i = 0; i < _changedCells.Count; i++)
+            OnDataChanged?.Invoke(_changedCells[i]);
         OnGridReset?.Invoke();
     }
 
@@ -158,26 +172,49 @@ public sealed class GridDataService : MonoBehaviour
         if (!result.canPlace) return false;
 
         if (result.isUpgrade)
-            return TryUpgrade(cell, result.previewDef);
+            return CommitUpgrade(cell, result.existingDef, result.previewDef);
 
-        return TryPlace(cell, selected);
+        return CommitPlacement(cell, selected);
     }
 
-    public bool TryPlace(Vector3Int cell, TowerDefinitionSO def)
+    private bool CommitPlacement(Vector3Int cell, TowerDefinitionSO def)
     {
-        if (def == null || string.IsNullOrEmpty(def.id)) return false;
+        if (gridSystem == null || def == null || string.IsNullOrEmpty(def.id)) return false;
         if (_data.ContainsKey(cell)) return false;
 
+        _cells.Clear();
+        FootprintMaskUtility.GetFootprintData(def, out FootprintMaskSO mask, out Vector2Int size, out Vector2Int pivot);
+        FootprintMaskUtility.GetFootprintCells(mask, size, pivot, ToCell2D(cell), _cells);
+        if (!gridSystem.TryOccupyAll(_cells)) return false;
+
+        _occupiedByTower[cell] = _cells.ToArray();
         _data[cell] = new TowerData { towerId = def.id, level = 1, order = _nextOrder++ };
         OnDataChanged?.Invoke(cell);
         return true;
     }
 
-    public bool TryUpgrade(Vector3Int cell, TowerDefinitionSO nextDef)
+    private bool CommitUpgrade(Vector3Int cell, TowerDefinitionSO existingDef, TowerDefinitionSO nextDef)
     {
-        if (nextDef == null || string.IsNullOrEmpty(nextDef.id)) return false;
+        if (gridSystem == null || existingDef == null || nextDef == null || string.IsNullOrEmpty(nextDef.id)) return false;
         if (!_data.TryGetValue(cell, out TowerData existing)) return false;
 
+        _upgradeCells.Clear();
+        if (_occupiedByTower.TryGetValue(cell, out Vector2Int[] ownedCells))
+        {
+            _upgradeCells.AddRange(ownedCells);
+        }
+        else
+        {
+            FootprintMaskUtility.GetFootprintData(existingDef, out FootprintMaskSO curMask, out Vector2Int curSize, out Vector2Int curPivot);
+            FootprintMaskUtility.GetFootprintCells(curMask, curSize, curPivot, ToCell2D(cell), _upgradeCells);
+        }
+
+        _cells.Clear();
+        FootprintMaskUtility.GetFootprintData(nextDef, out FootprintMaskSO nextMask, out Vector2Int nextSize, out Vector2Int nextPivot);
+        FootprintMaskUtility.GetFootprintCells(nextMask, nextSize, nextPivot, ToCell2D(cell), _cells);
+        if (!gridSystem.TryReplaceAll(_upgradeCells, _cells)) return false;
+
+        _occupiedByTower[cell] = _cells.ToArray();
         existing.towerId = nextDef.id;
         existing.level = Mathf.Max(1, existing.level + 1);
         _data[cell] = existing;
@@ -187,7 +224,20 @@ public sealed class GridDataService : MonoBehaviour
 
     public bool TryRemove(Vector3Int cell)
     {
-        if (!_data.Remove(cell)) return false;
+        if (!_data.TryGetValue(cell, out TowerData removed)) return false;
+        _data.Remove(cell);
+        if (_occupiedByTower.TryGetValue(cell, out Vector2Int[] occupiedCells))
+        {
+            gridSystem?.ReleaseAll(occupiedCells);
+            _occupiedByTower.Remove(cell);
+        }
+        else if (gridSystem != null && TryGetDefinition(removed.towerId, out TowerDefinitionSO removedDef))
+        {
+            _cells.Clear();
+            FootprintMaskUtility.GetFootprintData(removedDef, out FootprintMaskSO mask, out Vector2Int size, out Vector2Int pivot);
+            FootprintMaskUtility.GetFootprintCells(mask, size, pivot, ToCell2D(cell), _cells);
+            gridSystem.ReleaseAll(_cells);
+        }
         OnDataChanged?.Invoke(cell);
         return true;
     }

@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public sealed partial class PlacementVisualizer : MonoBehaviour
 {
@@ -54,23 +53,6 @@ public sealed partial class PlacementVisualizer : MonoBehaviour
         float ox = ((size.x - 1) * 0.5f - pivot.x) * grid.cellSize.x;
         float oz = ((size.y - 1) * 0.5f - pivot.y) * grid.cellSize.z;
         return new Vector3(ox, 0f, oz);
-    }
-
-    private void OccupyCells(List<Vector2Int> cells)
-    {
-        if (dataService == null || dataService.GridSystem == null) return;
-        for (int i = 0; i < cells.Count; i++)
-            dataService.GridSystem.TryOccupy(cells[i]);
-    }
-
-    private void ReleaseOccupiedCells(TowerDefinitionSO def, Vector3Int cell)
-    {
-        if (dataService == null || dataService.GridSystem == null || def == null) return;
-        _releaseCells.Clear();
-        FootprintMaskUtility.GetFootprintData(def, out FootprintMaskSO mask, out Vector2Int size, out Vector2Int pivot);
-        FootprintMaskUtility.GetFootprintCells(mask, size, pivot, ToCell2D(cell), _releaseCells);
-        for (int i = 0; i < _releaseCells.Count; i++)
-            dataService.GridSystem.Release(_releaseCells[i]);
     }
 
     private bool HasBasePlate(TowerDefinitionSO def)

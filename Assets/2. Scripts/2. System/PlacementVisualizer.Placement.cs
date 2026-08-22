@@ -56,7 +56,6 @@ public sealed partial class PlacementVisualizer : MonoBehaviour
             var resolvedScope = scope != null ? scope : RunScopeLocator.Current;
             tower.Construct(resolvedScope, def);
             resolvedScope?.Entities?.RegisterTower(tower);
-            OccupyCells(footprint);
         }
         else
         {
@@ -112,7 +111,6 @@ public sealed partial class PlacementVisualizer : MonoBehaviour
             ClearPanelBasePlateScaleCache(view.tower.gameObject);
             if (isWorldVisualizer)
             {
-                ReleaseOccupiedCells(view.def, cell);
                 view.tower.SuppressGridRelease();
                 var resolvedScope = scope != null ? scope : RunScopeLocator.Current;
                 resolvedScope?.Entities?.UnregisterTower(view.tower);
@@ -139,7 +137,6 @@ public sealed partial class PlacementVisualizer : MonoBehaviour
                 ClearPanelBasePlateScaleCache(kvp.Value.instance);
                 if (isWorldVisualizer)
                 {
-                    ReleaseOccupiedCells(kvp.Value.def, kvp.Key);
                     if (kvp.Value.tower != null)
                     {
                         kvp.Value.tower.SuppressGridRelease();
